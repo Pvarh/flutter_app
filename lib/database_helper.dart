@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
+
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -19,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2, // Increment the version number
+      version: 3, // Increment the version number
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // Add onUpgrade callback for migrations
     );
@@ -34,7 +35,7 @@ class DatabaseHelper {
         ingrediencie TEXT,
         postup TEXT,
         poznamky TEXT,
-        obrazokPath TEXT, // Add this column
+        obrazky TEXT, // Store list of image paths as a JSON string
         vytvorene TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         isFavorite INTEGER DEFAULT 0
       )
@@ -49,23 +50,23 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      // Add the obrazokPath column to the recepty table
-      await db.execute('ALTER TABLE recepty ADD COLUMN obrazokPath TEXT');
+    if (oldVersion < 3) {
+      // Add the obrazky column to the recepty table
+      await db.execute('ALTER TABLE recepty ADD COLUMN obrazky TEXT');
     }
   }
 
   // Metóda na pridanie receptu
   Future<int> insertRecept(Map<String, dynamic> recept) async {
-  final db = await database;
-  return await db.insert('recepty', recept);
-}
+    final db = await database;
+    return await db.insert('recepty', recept);
+  }
 
   // Metóda na získanie všetkých receptov
   Future<List<Map<String, dynamic>>> getRecepty() async {
-  final db = await database;
-  return await db.query('recepty');
-}
+    final db = await database;
+    return await db.query('recepty');
+  }
 
   // Metóda na pridanie kategórie
   Future<int> insertKategoria(String nazov) async {
@@ -93,20 +94,13 @@ class DatabaseHelper {
 
   // Metóda na aktualizáciu receptu
   Future<int> updateRecept(Map<String, dynamic> recept) async {
-  final db = await database;
-  return await db.update(
-    'recepty',
-    recept,
-    where: 'id = ?',
-    whereArgs: [recept['id']],
-  );
-}
-
-  // Metóda na aktualizáciu kategórie
-  Future<int> updateKategoria(Map<String, dynamic> kategoria) async {
     final db = await database;
-    int id = kategoria['id'];
-    return await db.update('kategorie', kategoria, where: 'id = ?', whereArgs: [id]);
+    return await db.update(
+      'recepty',
+      recept,
+      where: 'id = ?',
+      whereArgs: [recept['id']],
+    );
   }
 
   // Metóda na získanie receptu podľa ID

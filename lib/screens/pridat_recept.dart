@@ -26,7 +26,7 @@ class _PridatReceptState extends State<PridatRecept> {
   List<String> _kategorie = [];
   String? _selectedKategoria;
 
-  File? _selectedImage; // To store the selected image file
+  List<File> _selectedImages = []; // List to store multiple images
 
   // Function to pick an image from the gallery
   Future<void> _pickImage() async {
@@ -35,7 +35,7 @@ class _PridatReceptState extends State<PridatRecept> {
 
     if (pickedFile != null) {
       setState(() {
-        _selectedImage = File(pickedFile.path);
+        _selectedImages.add(File(pickedFile.path));
       });
     }
   }
@@ -67,7 +67,7 @@ class _PridatReceptState extends State<PridatRecept> {
       'ingrediencie': _ingrediencie.join(', '),
       'postup': _postupController.text,
       'poznamky': _poznamkyController.text,
-      'obrazokPath': _selectedImage?.path, // Save the image path
+      'obrazky': _selectedImages.map((image) => image.path).toList(), // Save image paths
     };
 
     await _dbHelper.insertRecept(novyRecept);
@@ -86,7 +86,7 @@ class _PridatReceptState extends State<PridatRecept> {
     setState(() {
       _ingrediencie.clear();
       _selectedKategoria = null;
-      _selectedImage = null; // Clear the selected image
+      _selectedImages.clear(); // Clear the selected images
     });
   }
 
@@ -100,19 +100,42 @@ class _PridatReceptState extends State<PridatRecept> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Image picker button
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: _selectedImage != null
-                    ? Image.file(_selectedImage!, fit: BoxFit.cover)
-                    : const Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
+            // Image picker section
+            SizedBox(
+              height: 100, // Fixed height for the image carousel
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _selectedImages.length + 1, // +1 for the add button
+                itemBuilder: (context, index) {
+                  if (index == _selectedImages.length) {
+                    // Add button
+                    return GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        width: 100,
+                        margin: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
+                      ),
+                    );
+                  } else {
+                    // Display selected images
+                    return Container(
+                      width: 100,
+                      margin: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        image: DecorationImage(
+                          image: FileImage(_selectedImages[index]),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
             ),
             const SizedBox(height: 20),
@@ -160,7 +183,7 @@ class _PridatReceptState extends State<PridatRecept> {
                     readOnly: true,
                     decoration: const InputDecoration(labelText: 'Ingrediencie'),
                     controller: TextEditingController(text: _ingrediencie.join(", ")),
-                  ),
+                ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add, color: Colors.blue),
@@ -206,7 +229,7 @@ class _PridatReceptState extends State<PridatRecept> {
     );
   }
 
-  // Other methods (_openIngrediencieDialog, _openKategoriaDialog, etc.) remain unchanged
+
   void _openIngrediencieDialog() {
     _novaIngrediencia = null;
     _mnozstvo = null;

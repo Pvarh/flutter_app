@@ -4,7 +4,7 @@ import 'dart:io';
 import '../database_helper.dart';
 
 class UpravitRecept extends StatefulWidget {
-  final Map<String, dynamic> recept;
+  final Map<String, dynamic> recept; // Pass the recipe to be edited
 
   const UpravitRecept({super.key, required this.recept});
 
@@ -28,13 +28,27 @@ class _UpravitReceptState extends State<UpravitRecept> {
   List<String> _kategorie = [];
   String? _selectedKategoria;
 
-  File? _selectedImage; // To store the selected image file
+  List<File> _selectedImages = []; // List to store multiple images
 
   @override
   void initState() {
     super.initState();
     _nacitatKategorie();
-    _nacitatReceptData();
+    _nacitatReceptData(); // Load the existing recipe data
+  }
+
+  // Load the existing recipe data
+  void _nacitatReceptData() {
+    _nazovController.text = widget.recept['nazov'];
+    _kategoriaController.text = widget.recept['kategoria'] ?? '';
+    _postupController.text = widget.recept['postup'];
+    _poznamkyController.text = widget.recept['poznamky'];
+    _ingrediencie = widget.recept['ingrediencie']?.split(', ') ?? [];
+    if (widget.recept['obrazky'] != null) {
+      _selectedImages = (widget.recept['obrazky'] as List<dynamic>)
+          .map((path) => File(path.toString()))
+          .toList();
+    }
   }
 
   void _nacitatKategorie() async {
@@ -44,17 +58,6 @@ class _UpravitReceptState extends State<UpravitRecept> {
     });
   }
 
-  void _nacitatReceptData() {
-    _nazovController.text = widget.recept['nazov'];
-    _kategoriaController.text = widget.recept['kategoria'] ?? '';
-    _postupController.text = widget.recept['postup'];
-    _poznamkyController.text = widget.recept['poznamky'];
-    _ingrediencie = widget.recept['ingrediencie']?.split(', ') ?? [];
-    if (widget.recept['obrazokPath'] != null) {
-      _selectedImage = File(widget.recept['obrazokPath']);
-    }
-  }
-
   // Function to pick an image from the gallery
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -62,12 +65,13 @@ class _UpravitReceptState extends State<UpravitRecept> {
 
     if (pickedFile != null) {
       setState(() {
-        _selectedImage = File(pickedFile.path);
+        _selectedImages.add(File(pickedFile.path));
       });
     }
   }
 
-  Future<void> _updateRecept() async {
+  // Function to update the recipe
+  void _upravitRecept() async {
     if (_nazovController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Názov receptu je povinný!')),
@@ -82,7 +86,7 @@ class _UpravitReceptState extends State<UpravitRecept> {
       'ingrediencie': _ingrediencie.join(', '),
       'postup': _postupController.text,
       'poznamky': _poznamkyController.text,
-      'obrazokPath': _selectedImage?.path, // Update the image path
+      'obrazky': _selectedImages.map((image) => image.path).toList(), // Update image paths
     };
 
     await _dbHelper.updateRecept(updatedRecept);
@@ -107,19 +111,42 @@ class _UpravitReceptState extends State<UpravitRecept> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Image picker button
-            GestureDetector(
-              onTap: _pickImage,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: _selectedImage != null
-                    ? Image.file(_selectedImage!, fit: BoxFit.cover)
-                    : const Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
+            // Image picker section
+            SizedBox(
+              height: 100, // Fixed height for the image carousel
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _selectedImages.length + 1, // +1 for the add button
+                itemBuilder: (context, index) {
+                  if (index == _selectedImages.length) {
+                    // Add button
+                    return GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        width: 100,
+                        margin: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
+                      ),
+                    );
+                  } else {
+                    // Display selected images
+                    return Container(
+                      width: 100,
+                      margin: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        image: DecorationImage(
+                          image: FileImage(_selectedImages[index]),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
             ),
             const SizedBox(height: 20),
@@ -167,7 +194,7 @@ class _UpravitReceptState extends State<UpravitRecept> {
                     readOnly: true,
                     decoration: const InputDecoration(labelText: 'Ingrediencie'),
                     controller: TextEditingController(text: _ingrediencie.join(", ")),
-                ),
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add, color: Colors.blue),
@@ -204,7 +231,7 @@ class _UpravitReceptState extends State<UpravitRecept> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _updateRecept,
+              onPressed: _upravitRecept,
               child: const Text('Aktualizovať recept'),
             ),
           ],
@@ -212,86 +239,8 @@ class _UpravitReceptState extends State<UpravitRecept> {
       ),
     );
   }
-  void _openIngrediencieDialog() {
-    _novaIngrediencia = null;
-    _mnozstvo = null;
-    _selectedUnit = _units.first;
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text("Pridať ingredienciu"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    onChanged: (value) {
-                      setStateDialog(() => _novaIngrediencia = value);
-                    },
-                    decoration: const InputDecoration(labelText: 'Názov ingrediencie'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Názov ingrediencie je povinný!';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      setStateDialog(() => _mnozstvo = double.tryParse(value));
-                    },
-                    decoration: const InputDecoration(labelText: 'Množstvo'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Množstvo je povinné!';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  DropdownButton<String>(
-                    value: _selectedUnit,
-                    onChanged: (String? newValue) {
-                      setStateDialog(() => _selectedUnit = newValue!);
-                    },
-                    items: _units.map<DropdownMenuItem<String>>((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('❌ Zrušiť'),
-                ),
-                TextButton(
-                  onPressed: _novaIngrediencia != null && _novaIngrediencia!.trim().isNotEmpty && _mnozstvo != null
-                      ? () {
-                          setState(() {
-                            _ingrediencie.add("$_mnozstvo $_selectedUnit $_novaIngrediencia");
-                          });
-                          Navigator.pop(context);
-                        }
-                      : null,
-                  child: const Text('✅ Pridať'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
+  // Other methods (_openIngrediencieDialog, _openKategoriaDialog, etc.) remain unchanged
   void _openKategoriaDialog() {
     String? _novaKategoria;
 
@@ -338,5 +287,84 @@ class _UpravitReceptState extends State<UpravitRecept> {
       },
     );
   }
-  // Other methods (_openIngrediencieDialog, _openKategoriaDialog, etc.) remain unchanged
+  void _openIngrediencieDialog() {
+  _novaIngrediencia = null;
+  _mnozstvo = null;
+  _selectedUnit = _units.first;
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text("Pridať ingredienciu"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  onChanged: (value) {
+                    setStateDialog(() => _novaIngrediencia = value);
+                  },
+                  decoration: const InputDecoration(labelText: 'Názov ingrediencie'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Názov ingrediencie je povinný!';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    setStateDialog(() => _mnozstvo = double.tryParse(value));
+                  },
+                  decoration: const InputDecoration(labelText: 'Množstvo'),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Množstvo je povinné!';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                DropdownButton<String>(
+                  value: _selectedUnit,
+                  onChanged: (String? newValue) {
+                    setStateDialog(() => _selectedUnit = newValue!);
+                  },
+                  items: _units.map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('❌ Zrušiť'),
+              ),
+              TextButton(
+                onPressed: _novaIngrediencia != null && _novaIngrediencia!.trim().isNotEmpty && _mnozstvo != null
+                    ? () {
+                        setState(() {
+                          _ingrediencie.add("$_mnozstvo $_selectedUnit $_novaIngrediencia");
+                        });
+                        Navigator.pop(context);
+                      }
+                    : null,
+                child: const Text('✅ Pridať'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
 }
