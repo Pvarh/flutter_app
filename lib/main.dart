@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/recept_provider.dart';
 import 'screens/home_screen.dart';
+import 'dart:ui'; // Import for ImageFilter
 
 void main() {
   runApp(
@@ -25,14 +26,15 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         // Customize the theme
         colorScheme: ThemeData().colorScheme.copyWith(
-              primary: const Color.fromARGB(255, 255, 255, 255), // Primary color
+              primary: const Color.fromARGB(255, 204, 204, 204), // Primary color
               secondary: const Color.fromARGB(255, 233, 118, 11), // Accent color
-              surface: const Color.fromARGB(210, 255, 255, 255), // Surface color
-              onSurface: const Color.fromARGB(255, 166, 166, 166), // Text color on surface
+              surface: const Color.fromARGB(210, 214, 214, 214), // Surface color
+              onSurface: const Color.fromARGB(255, 43, 40, 40), // Text color on surface
             ),
         // Add more theme customizations if needed
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color.fromARGB(200, 0, 0, 0), // AppBar background color
+          backgroundColor: Colors.transparent, // Make AppBar background transparent
+          elevation: 0, // Remove shadow
           titleTextStyle: TextStyle(
             color: Colors.white, // AppBar title text color
             fontSize: 20,

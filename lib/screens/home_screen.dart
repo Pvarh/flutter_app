@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Pridať recept'),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: const Color.fromARGB(255, 161, 244, 144),backgroundColor: Color.fromARGB(179, 0, 0, 0),
+        selectedItemColor: const Color.fromARGB(255, 161, 244, 144),backgroundColor: Color.fromARGB(228, 0, 0, 0),
         onTap: _onItemTapped,
       ),
     );

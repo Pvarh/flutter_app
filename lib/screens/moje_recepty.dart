@@ -4,6 +4,7 @@ import '../providers/recept_provider.dart';
 import 'detail_receptu.dart';
 import 'pridat_recept.dart';
 import 'dart:io';
+import 'dart:ui'; // Import for ImageFilter
 
 class MojeRecepty extends StatefulWidget {
   const MojeRecepty({super.key});
@@ -34,6 +35,16 @@ class _MojeReceptyState extends State<MojeRecepty> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Moje Recepty'),
+        backgroundColor: const Color.fromARGB(255, 0, 0, 0), // Make AppBar background transparent
+        elevation: 0, // Remove shadow
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20), // Adjust blur intensity
+            child: Container(
+              color: const Color.fromARGB(255, 34, 34, 34).withOpacity(0.5), // Semi-transparent overlay
+            ),
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -55,76 +66,108 @@ class _MojeReceptyState extends State<MojeRecepty> {
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          if (_isSearchVisible)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Hľadať recepty',
-                  prefixIcon: Icon(Icons.search),
+          // Neon Glow Effect (placed just below the AppBar)
+          Positioned(
+            top: 0, // Position the glow at the top of the body
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 5, // Height of the glow effect
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color.fromARGB(255, 1, 135, 245).withOpacity(0.5), // Neon glow color
+                    blurRadius: 20, // Spread of the glow
+                    spreadRadius: 10, // How far the glow extends
+                  ),
+                ],
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.blue.withOpacity(0.5),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                  });
-                },
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: DropdownButton<String>(
-                    value: _selectedFilterKategoria,
-                    hint: const Text('Filtrovať podľa kategórie'),
-                    onChanged: (String? newValue) {
+          ),
+
+          // Your existing body content
+          Column(
+            children: [
+              if (_isSearchVisible)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Hľadať recepty',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: (value) {
                       setState(() {
-                        _selectedFilterKategoria = newValue;
+                        _searchQuery = value;
                       });
                     },
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text('Všetky kategórie'),
-                      ),
-                      ...receptProvider.kategorie.map<DropdownMenuItem<String>>(
-                        (String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButton<String>(
+                        value: _selectedFilterKategoria,
+                        hint: const Text('Filtrovať podľa kategórie'),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedFilterKategoria = newValue;
+                          });
                         },
-                      ).toList(),
-                      const DropdownMenuItem<String>(
-                        value: 'Bez kategórie',
-                        child: Text('Bez kategórie'),
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('Všetky kategórie'),
+                          ),
+                          ...receptProvider.kategorie.map<DropdownMenuItem<String>>(
+                            (String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(value),
+                              );
+                            },
+                          ).toList(),
+                          const DropdownMenuItem<String>(
+                            value: 'Bez kategórie',
+                            child: Text('Bez kategórie'),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        _showFavoritesOnly ? Icons.star : Icons.star_border,
+                        color: _showFavoritesOnly ? Colors.amber : Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _showFavoritesOnly = !_showFavoritesOnly;
+                          if (_showFavoritesOnly) {
+                            // Reset search and category filters when showing favorites
+                            _searchQuery = '';
+                            _selectedFilterKategoria = null;
+                          }
+                        });
+                      },
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: Icon(
-                    _showFavoritesOnly ? Icons.star : Icons.star_border,
-                    color: _showFavoritesOnly ? Colors.amber : Colors.grey,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _showFavoritesOnly = !_showFavoritesOnly;
-                      if (_showFavoritesOnly) {
-                        // Reset search and category filters when showing favorites
-                        _searchQuery = '';
-                        _selectedFilterKategoria = null;
-                      }
-                    });
-                  },
-                ),
-              ],
-            ),
+              ),
+              Expanded(child: _buildReceptyList(receptProvider)),
+            ],
           ),
-          Expanded(child: _buildReceptyList(receptProvider)),
         ],
       ),
     );
