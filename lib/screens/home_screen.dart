@@ -26,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Receptár')),
+      
       body: _widgetOptions[_selectedIndex],backgroundColor: Color.fromARGB(236, 255, 255, 255),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Pridať recept'),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: const Color.fromARGB(255, 161, 244, 144),backgroundColor: Color.fromARGB(255, 128, 198, 142),
+        selectedItemColor: const Color.fromARGB(255, 161, 244, 144),backgroundColor: Color.fromARGB(179, 0, 0, 0),
         onTap: _onItemTapped,
       ),
     );
