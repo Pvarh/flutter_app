@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../database_helper.dart';
+import 'dart:convert';
 
 class PridatRecept extends StatefulWidget {
   const PridatRecept({super.key});
@@ -54,41 +55,41 @@ class _PridatReceptState extends State<PridatRecept> {
   }
 
   void _pridatRecept() async {
-    if (_nazovController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Názov receptu je povinný!')),
-      );
-      return;
-    }
-
-    final novyRecept = {
-      'nazov': _nazovController.text,
-      'kategoria': _selectedKategoria ?? '',
-      'ingrediencie': _ingrediencie.join(', '),
-      'postup': _postupController.text,
-      'poznamky': _poznamkyController.text,
-      'obrazky': _selectedImages.map((image) => image.path).toList(), // Save image paths
-    };
-
-    await _dbHelper.insertRecept(novyRecept);
-
-    if (!mounted) return;
-
+  if (_nazovController.text.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Recept bol pridaný!')),
+      const SnackBar(content: Text('Názov receptu je povinný!')),
     );
-
-    // Vyčistenie polí po uložení
-    _nazovController.clear();
-    _kategoriaController.clear();
-    _postupController.clear();
-    _poznamkyController.clear();
-    setState(() {
-      _ingrediencie.clear();
-      _selectedKategoria = null;
-      _selectedImages.clear(); // Clear the selected images
-    });
+    return;
   }
+
+  final novyRecept = {
+    'nazov': _nazovController.text,
+    'kategoria': _selectedKategoria ?? '',
+    'ingrediencie': _ingrediencie.join(', '),
+    'postup': _postupController.text,
+    'poznamky': _poznamkyController.text,
+    'obrazky': jsonEncode(_selectedImages.map((image) => image.path).toList()), // Convert list to JSON string
+  };
+
+  await _dbHelper.insertRecept(novyRecept);
+
+  if (!mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Recept bol pridaný!')),
+  );
+
+  // Clear the form
+  _nazovController.clear();
+  _kategoriaController.clear();
+  _postupController.clear();
+  _poznamkyController.clear();
+  setState(() {
+    _ingrediencie.clear();
+    _selectedKategoria = null;
+    _selectedImages.clear();
+  });
+}
 
   @override
   Widget build(BuildContext context) {

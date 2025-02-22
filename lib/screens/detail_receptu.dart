@@ -3,6 +3,7 @@ import 'upravit_recept.dart'; // Nová obrazovka pre úpravu receptu
 import '../providers/recept_provider.dart'; // Import your ReceptProvider
 import 'package:provider/provider.dart'; // Import Provider package
 
+
 class DetailReceptu extends StatefulWidget {
   final Map<String, dynamic> recept;
 

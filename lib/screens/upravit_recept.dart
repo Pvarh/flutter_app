@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:convert'; // Add this import for jsonDecode
 import '../database_helper.dart';
 
 class UpravitRecept extends StatefulWidget {
-  final Map<String, dynamic> recept; // Pass the recipe to be edited
+  final Map<String, dynamic> recept;
 
   const UpravitRecept({super.key, required this.recept});
 
@@ -44,10 +45,11 @@ class _UpravitReceptState extends State<UpravitRecept> {
     _postupController.text = widget.recept['postup'];
     _poznamkyController.text = widget.recept['poznamky'];
     _ingrediencie = widget.recept['ingrediencie']?.split(', ') ?? [];
+
+    // Decode the 'obrazky' field from JSON string to List<String>
     if (widget.recept['obrazky'] != null) {
-      _selectedImages = (widget.recept['obrazky'] as List<dynamic>)
-          .map((path) => File(path.toString()))
-          .toList();
+      final List<dynamic> obrazkyJson = jsonDecode(widget.recept['obrazky']);
+      _selectedImages = obrazkyJson.map((path) => File(path.toString())).toList();
     }
   }
 
@@ -86,7 +88,7 @@ class _UpravitReceptState extends State<UpravitRecept> {
       'ingrediencie': _ingrediencie.join(', '),
       'postup': _postupController.text,
       'poznamky': _poznamkyController.text,
-      'obrazky': _selectedImages.map((image) => image.path).toList(), // Update image paths
+      'obrazky': jsonEncode(_selectedImages.map((image) => image.path).toList()), // Encode the list
     };
 
     await _dbHelper.updateRecept(updatedRecept);
@@ -239,8 +241,7 @@ class _UpravitReceptState extends State<UpravitRecept> {
       ),
     );
   }
-
-  // Other methods (_openIngrediencieDialog, _openKategoriaDialog, etc.) remain unchanged
+  
   void _openKategoriaDialog() {
     String? _novaKategoria;
 

@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3, // Increment the version number
+      version: 2, // Increment the version number
       onCreate: _onCreate,
       onUpgrade: _onUpgrade, // Add onUpgrade callback for migrations
     );
@@ -35,7 +35,7 @@ class DatabaseHelper {
         ingrediencie TEXT,
         postup TEXT,
         poznamky TEXT,
-        obrazky TEXT, // Store list of image paths as a JSON string
+        obrazky TEXT,
         vytvorene TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         isFavorite INTEGER DEFAULT 0
       )
@@ -50,13 +50,13 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 3) {
-      // Add the obrazky column to the recepty table
-      await db.execute('ALTER TABLE recepty ADD COLUMN obrazky TEXT');
+    if (oldVersion < 2) {
+      // Add the isFavorite column to the recepty table
+      await db.execute('ALTER TABLE recepty ADD COLUMN isFavorite INTEGER DEFAULT 0');
     }
   }
 
-  // Metóda na pridanie receptu
+  // Insert a new recipe
   Future<int> insertRecept(Map<String, dynamic> recept) async {
     final db = await database;
     return await db.insert('recepty', recept);
