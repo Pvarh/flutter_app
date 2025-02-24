@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
         ),
         textTheme: const TextTheme(
           bodyLarge: TextStyle(color: Colors.white), // Default text color
-          bodyMedium: TextStyle(color: Colors.white),
+          bodyMedium: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
         ),
       ),
       home: const HomeScreen(), // Set the home screen

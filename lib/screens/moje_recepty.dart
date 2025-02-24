@@ -28,53 +28,26 @@ class _MojeReceptyState extends State<MojeRecepty> {
     receptProvider.nacitatKategorie();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final receptProvider = Provider.of<ReceptProvider>(context);
+ @override
+Widget build(BuildContext context) {
+  final receptProvider = Provider.of<ReceptProvider>(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Moje Recepty'),
-        backgroundColor: const Color.fromARGB(255, 0, 0, 0), // Make AppBar background transparent
-        elevation: 0, // Remove shadow
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20), // Adjust blur intensity
-            child: Container(
-              color: const Color.fromARGB(255, 34, 34, 34).withOpacity(0.5), // Semi-transparent overlay
+  return Scaffold(
+    // Wrap the Scaffold in a Stack to layer the neon glow and content
+    body: Stack(
+      children: [
+        // Neon Glow Effect (wrapping around the rounded AppBar)
+        Positioned(
+          top: kToolbarHeight + 30, // Position the glow slightly above the AppBar bottom
+          left: 0,
+          right: 0,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20), // Match the AppBar's rounded edges
+              bottomRight: Radius.circular(20),
             ),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              setState(() {
-                _isSearchVisible = !_isSearchVisible;
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              // Otvorenie obrazovky pre pridanie receptu
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const PridatRecept()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // Neon Glow Effect (placed just below the AppBar)
-          Positioned(
-            top: 0, // Position the glow at the top of the body
-            left: 0,
-            right: 0,
             child: Container(
-              height: 5, // Height of the glow effect
+              height: 20, // Height of the glow effect
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
@@ -94,9 +67,59 @@ class _MojeReceptyState extends State<MojeRecepty> {
               ),
             ),
           ),
+        ),
 
-          // Your existing body content
-          Column(
+        // Scaffold with AppBar and Body
+        Scaffold(
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(kToolbarHeight + 20), // Increase height for rounded edges
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(20), // Rounded bottom edges
+                bottomRight: Radius.circular(20),
+              ),
+              child: AppBar(
+                title: const Text('Moje Recepty'), // AppBar title
+                backgroundColor: Colors.transparent, // Make AppBar background transparent
+                elevation: 0, // Remove shadow
+                flexibleSpace: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(20), // Match the AppBar's rounded edges
+                    bottomRight: Radius.circular(20),
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20), // Adjust blur intensity
+                    child: Container(
+                      color: Colors.black.withOpacity(0.5), // Semi-transparent overlay
+                    ),
+                  ),
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () {
+                      setState(() {
+                        _isSearchVisible = !_isSearchVisible;
+                      });
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () {
+                      // Otvorenie obrazovky pre pridanie receptu
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const PridatRecept()),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Make the Scaffold background transparent
+          backgroundColor: Colors.transparent,
+          body: Column(
             children: [
               if (_isSearchVisible)
                 Padding(
@@ -168,10 +191,11 @@ class _MojeReceptyState extends State<MojeRecepty> {
               Expanded(child: _buildReceptyList(receptProvider)),
             ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildReceptyList(ReceptProvider receptProvider) {
     final recepty = receptProvider.recepty;
