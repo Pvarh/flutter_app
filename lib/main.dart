@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/recept_provider.dart';
-import 'screens/home_screen.dart';
+import 'screens/moje_recepty.dart'; // Import MojeRecepty directly
 import 'dart:ui'; // Import for ImageFilter
 
 void main() {
+
   runApp(
     MultiProvider(
       providers: [
@@ -26,9 +27,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         // Customize the theme
         colorScheme: ThemeData().colorScheme.copyWith(
-              primary: const Color.fromARGB(255, 204, 204, 204), // Primary color
-              secondary: const Color.fromARGB(255, 233, 118, 11), // Accent color
-              surface: const Color.fromARGB(210, 214, 214, 214), // Surface color
+              surface: const Color.fromARGB(210, 255, 255, 255), // Surface color
               onSurface: const Color.fromARGB(255, 43, 40, 40), // Text color on surface
             ),
         // Add more theme customizations if needed
@@ -36,17 +35,13 @@ class MyApp extends StatelessWidget {
           backgroundColor: Colors.transparent, // Make AppBar background transparent
           elevation: 0, // Remove shadow
           titleTextStyle: TextStyle(
-            color: Colors.white, // AppBar title text color
+            color: Color.fromARGB(255, 100, 100, 100), // AppBar title text color
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Colors.white), // Default text color
-          bodyMedium: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-        ),
       ),
-      home: const HomeScreen(), // Set the home screen
+      home: const MojeRecepty(), // Set MojeRecepty as the home screen
     );
   }
 }

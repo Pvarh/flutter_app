@@ -21,12 +21,13 @@ class _MojeReceptyState extends State<MojeRecepty> {
 
   @override
   void initState() {
-    super.initState();
-    // Načítanie receptov a kategórií pri spustení
+  super.initState();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     final receptProvider = Provider.of<ReceptProvider>(context, listen: false);
     receptProvider.nacitatRecepty();
     receptProvider.nacitatKategorie();
-  }
+  });
+}
 
  @override
 Widget build(BuildContext context) {
@@ -104,15 +105,14 @@ Widget build(BuildContext context) {
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: () {
-                      // Otvorenie obrazovky pre pridanie receptu
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const PridatRecept()),
-                      );
-                    },
-                  ),
+                          icon: const Icon(Icons.add),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const PridatRecept()),
+                            );
+                          },
+                        ),
                 ],
               ),
             ),
