@@ -198,88 +198,89 @@ Widget build(BuildContext context) {
 }
 
   Widget _buildReceptyList(ReceptProvider receptProvider) {
-    final recepty = receptProvider.recepty;
-    final filtrovaneRecepty =
-        recepty.where((recept) {
-          final matchesSearch = recept['nazov'].toLowerCase().contains(
-            _searchQuery.toLowerCase(),
-          );
-          final matchesCategory =
-              _selectedFilterKategoria == null ||
-              (_selectedFilterKategoria == 'Bez kategórie'
-                  ? recept['kategoria'] == null || recept['kategoria'].isEmpty
-                  : recept['kategoria'] == _selectedFilterKategoria);
-          final matchesFavorites =
-              !_showFavoritesOnly || recept['isFavorite'] == 1;
-          return matchesSearch && matchesCategory && matchesFavorites;
-        }).toList();
+  return Consumer<ReceptProvider>(
+    builder: (context, receptProvider, child) {
+      final recepty = receptProvider.recepty;
+      final filtrovaneRecepty = recepty.where((recept) {
+        final matchesSearch = recept['nazov'].toLowerCase().contains(
+              _searchQuery.toLowerCase(),
+            );
+        final matchesCategory =
+            _selectedFilterKategoria == null ||
+                (_selectedFilterKategoria == 'Bez kategórie'
+                    ? recept['kategoria'] == null || recept['kategoria'].isEmpty
+                    : recept['kategoria'] == _selectedFilterKategoria);
+        final matchesFavorites =
+            !_showFavoritesOnly || recept['isFavorite'] == 1;
+        return matchesSearch && matchesCategory && matchesFavorites;
+      }).toList();
 
-    if (filtrovaneRecepty.isEmpty) {
-      return const Center(child: Text('Žiadne recepty.'));
-    }
+      if (filtrovaneRecepty.isEmpty) {
+        return const Center(child: Text('Žiadne recepty.'));
+      }
 
-    final kategorie = _zoskupitReceptyPodlaKategorie(filtrovaneRecepty);
+      final kategorie = _zoskupitReceptyPodlaKategorie(filtrovaneRecepty);
 
-    return ListView.builder(
-      itemCount: kategorie.length,
-      itemBuilder: (context, index) {
-        final kategoria = kategorie.keys.elementAt(index);
-        final receptyVKategorii = kategorie[kategoria]!;
+      return ListView.builder(
+        itemCount: kategorie.length,
+        itemBuilder: (context, index) {
+          final kategoria = kategorie.keys.elementAt(index);
+          final receptyVKategorii = kategorie[kategoria]!;
 
-        return ExpansionTile(
-          title: Text(kategoria),
-          children: [
-            ...receptyVKategorii.map((recept) {
-              return Card(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 8.0,
-                  vertical: 4.0,
-                ),
-                child: ListTile(
-                  leading:
-                      recept['obrazokPath'] != null
-                          ? Image.file(
+          return ExpansionTile(
+            title: Text(kategoria),
+            children: [
+              ...receptyVKategorii.map((recept) {
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 8.0,
+                    vertical: 4.0,
+                  ),
+                  child: ListTile(
+                    leading: recept['obrazokPath'] != null
+                        ? Image.file(
                             File(recept['obrazokPath']),
                             width: 50,
                             height: 50,
                             fit: BoxFit.cover,
                           )
-                          : const Icon(
+                        : const Icon(
                             Icons.image,
                             size: 50,
                           ), // Placeholder if no image
-                  title: Text(recept['nazov']),
-                  subtitle: Text(recept['vytvorene'] ?? ''),
-                  trailing: IconButton(
-                    icon: Icon(
-                      recept['isFavorite'] == 1
-                          ? Icons.star
-                          : Icons.star_border,
-                      color:
-                          recept['isFavorite'] == 1
-                              ? Colors.amber
-                              : Colors.grey,
+                    title: Text(recept['nazov']),
+                    subtitle: Text(recept['vytvorene'] ?? ''),
+                    trailing: IconButton(
+                      icon: Icon(
+                        recept['isFavorite'] == 1
+                            ? Icons.star
+                            : Icons.star_border,
+                        color: recept['isFavorite'] == 1
+                            ? Colors.amber
+                            : Colors.grey,
+                      ),
+                      onPressed: () {
+                        receptProvider.toggleFavorite(recept['id']);
+                      },
                     ),
-                    onPressed: () {
-                      receptProvider.toggleFavorite(recept['id']);
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetailReceptu(recept: recept),
+                        ),
+                      );
                     },
                   ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetailReceptu(recept: recept),
-                      ),
-                    );
-                  },
-                ),
-              );
-            }).toList(),
-          ],
-        );
-      },
-    );
-  }
+                );
+              }).toList(),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
 
   Map<String, List<Map<String, dynamic>>> _zoskupitReceptyPodlaKategorie(
     List<Map<String, dynamic>> recepty,

@@ -63,6 +63,10 @@ class _DetailReceptuState extends State<DetailReceptu> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if the postup text contains step numbers
+    final postupText = widget.recept['postup'];
+    final isStepByStep = postupText.contains(RegExp(r'^\d+ - '));
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail receptu'),
@@ -114,10 +118,18 @@ class _DetailReceptuState extends State<DetailReceptu> {
               'Postup:',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            Text(
-              widget.recept['postup'],
-              style: const TextStyle(fontSize: 16),
-            ),
+            if (isStepByStep)
+              ...postupText.split('\n').map((step) {
+                return Text(
+                  step,
+                  style: const TextStyle(fontSize: 16),
+                );
+              }).toList()
+            else
+              Text(
+                postupText,
+                style: const TextStyle(fontSize: 16),
+              ),
             const SizedBox(height: 20),
             const Text(
               'Poznámky:',
