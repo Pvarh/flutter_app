@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/recept_provider.dart';
+import 'providers/functions_provider.dart';
 import 'screens/moje_recepty.dart'; // Import MojeRecepty directly
 
 
@@ -10,6 +11,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ReceptProvider()), // State management for recipes
+        ChangeNotifierProvider(create: (_) => FunctionsProvider()),
       ],
       child: const MyApp(),
     ),
@@ -27,7 +29,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         // Customize the theme
         colorScheme: ThemeData().colorScheme.copyWith(
-              primary: const Color.fromARGB(255, 255, 255, 255), // Primary color
+              primary: const Color.fromARGB(255, 88, 88, 88), // Primary color
               surface: const Color.fromARGB(210, 255, 255, 255), // Surface color
               onSurface: const Color.fromARGB(255, 43, 40, 40), // Text color on surface
             ),

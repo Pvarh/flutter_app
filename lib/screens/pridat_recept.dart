@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:ui';
 import '../database_helper.dart';
 import 'dart:convert';
+import '../providers/functions_provider.dart';
 
 class PridatRecept extends StatefulWidget {
   const PridatRecept({super.key});
@@ -69,12 +70,15 @@ class BottomDesign extends StatelessWidget {
   }
 }
 
-class _PridatReceptState extends State<PridatRecept> {
+class _PridatReceptState extends State<PridatRecept>
+    with WidgetsBindingObserver {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final TextEditingController _nazovController = TextEditingController();
   final TextEditingController _kategoriaController = TextEditingController();
   final TextEditingController _postupController = TextEditingController();
   final TextEditingController _poznamkyController = TextEditingController();
+
+  late final FunctionsProvider functionsProvider;
 
   List<String> _ingrediencie = [];
   String? _novaIngrediencia;
@@ -95,26 +99,55 @@ class _PridatReceptState extends State<PridatRecept> {
   List<File> _selectedImages = []; // List to store multiple images
 
   UniqueKey _scaffoldKey = UniqueKey();
-
-  // Function to pick an image from the gallery
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() {
-        _selectedImages.add(File(pickedFile.path));
-      });
-    }
-    setState(() {
-        _scaffoldKey = UniqueKey(); // Generate a new Key
-      });
-  }
+  bool _isLoading = false; // Flag to control loading animation
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Add lifecycle observer
+    functionsProvider = Provider.of<FunctionsProvider>(context, listen: false); // Initialize FunctionsProvider
     _nacitatKategorie();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Remove lifecycle observer
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Show loading animation
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Simulate a delay for the loading animation
+      Future.delayed(const Duration(seconds: 2), () {
+        // Reset the widgets or state after the delay
+        setState(() {
+          _scaffoldKey = UniqueKey(); // Reset the Scaffold key
+          _isLoading = false; // Hide loading animation
+        });
+      });
+    }
+  }
+
+  // Function to pick an image from the gallery
+ Future<void> _pickImage() async {
+  final picker = ImagePicker();
+  final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+  if (pickedFile != null) {
+    setState(() {
+      _selectedImages.add(File(pickedFile.path));
+      print('Selected Images: $_selectedImages'); // Debug print
+    });
+  }
+    setState(() {
+      _scaffoldKey = UniqueKey(); // Generate a new Key
+    });
   }
 
   void _nacitatKategorie() async {
@@ -123,210 +156,224 @@ class _PridatReceptState extends State<PridatRecept> {
       _kategorie = kategorie.map((k) => k['nazov'] as String).toList();
     });
   }
-  void _removeStep(int index) {
-  setState(() {
-    _steps.removeAt(index); // Remove the step at the specified index
-    // Update the step numbers for the remaining steps
-    for (var i = 0; i < _steps.length; i++) {
-      _steps[i]['number'] = i + 1; // Reassign step numbers sequentially
-    }
-  });
-}
 
-void _pridatRecept() async {
-  if (_nazovController.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Názov receptu je povinný!')),
-    );
-    return;
+  void _removeStep(int index) {
+    setState(() {
+      _steps.removeAt(index); // Remove the step at the specified index
+      // Update the step numbers for the remaining steps
+      for (var i = 0; i < _steps.length; i++) {
+        _steps[i]['number'] = i + 1; // Reassign step numbers sequentially
+      }
+    });
   }
 
-  
+  void _pridatRecept() async {
+    if (_nazovController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Názov receptu je povinný!')),
+      );
+      return;
+    }
 
-  final postupText = _isStepMode
-      ? _steps.map((step) => '${step['number']} - ${step['text']}').join('\n') // Combine steps
-      : _postupController.text; // Use plain text
+    final postupText =
+        _isStepMode
+            ? _steps
+                .map((step) => '${step['number']} - ${step['text']}')
+                .join('\n') // Combine steps
+            : _postupController.text; // Use plain text
 
-  final novyRecept = {
-    'nazov': _nazovController.text,
-    'kategoria': _selectedKategoria ?? '',
-    'ingrediencie': _ingrediencie.join(', '),
-    'postup': postupText, // Save postup in the correct format
-    'poznamky': _poznamkyController.text,
-    'obrazky': jsonEncode(_selectedImages.map((image) => image.path).toList()),
-  };
+    final novyRecept = {
+      'nazov': _nazovController.text,
+      'kategoria': _selectedKategoria ?? '',
+      'ingrediencie': _ingrediencie.join(', '),
+      'postup': postupText, // Save postup in the correct format
+      'poznamky': _poznamkyController.text,
+      'obrazky': jsonEncode(
+        _selectedImages.map((image) => image.path).toList(),
+      ),
+    };
 
-  await _dbHelper.insertRecept(novyRecept);
+    await _dbHelper.insertRecept(novyRecept);
 
-  if (!mounted) return;
+    if (!mounted) return;
 
-  // Refresh the ReceptProvider to load the latest recipes
-  final receptProvider = Provider.of<ReceptProvider>(context, listen: false);
-  await receptProvider.nacitatRecepty();
+    // Refresh the ReceptProvider to load the latest recipes
+    final receptProvider = Provider.of<ReceptProvider>(context, listen: false);
+    await receptProvider.nacitatRecepty();
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Recept bol pridaný!')),
-  );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Recept bol pridaný!')));
 
-  // Clear the form
-  _nazovController.clear();
-  _kategoriaController.clear();
-  _postupController.clear();
-  _poznamkyController.clear();
-  setState(() {
-    _ingrediencie.clear();
-    _selectedKategoria = null;
-    _selectedImages.clear();
-    _steps.clear();
-  });
+    // Clear the form
+    _nazovController.clear();
+    _kategoriaController.clear();
+    _postupController.clear();
+    _poznamkyController.clear();
+    setState(() {
+      _ingrediencie.clear();
+      _selectedKategoria = null;
+      _selectedImages.clear();
+      _steps.clear();
+    });
 
-  // Navigate back to MojeRecepty
-  Navigator.pop(context);
-}
+    // Navigate back to MojeRecepty
+    Navigator.pop(context);
+  }
 
   void _editStep(int index) {
-  final step = _steps[index];
-  final TextEditingController _stepController = TextEditingController(
-    text: step['text'],
-  );
+    final step = _steps[index];
+    final TextEditingController _stepController = TextEditingController(
+      text: step['text'],
+    );
 
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        backgroundColor: Color.fromRGBO(242, 247, 251, 1.0), // Match your widget background color
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10), // Rounded corners
-        ),
-        title: const Text(
-          'Upraviť krok',
-          style: TextStyle(
-            color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-            fontWeight: FontWeight.bold,
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Color.fromRGBO(
+            242,
+            247,
+            251,
+            1.0,
+          ), // Match your widget background color
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10), // Rounded corners
           ),
-        ),
-        content: SingleChildScrollView(
-          child: TextFormField(
-            controller: _stepController,
-            decoration: InputDecoration(
-              labelText: 'Text kroku',
-              labelStyle: TextStyle(
-                color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10), // Rounded corners
-                borderSide: BorderSide(
-                  color: Color.fromARGB(255, 43, 40, 40), // Dark border
+          title: const Text(
+            'Upraviť krok',
+            style: TextStyle(
+              color: Color.fromARGB(255, 43, 40, 40), // Dark text color
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: TextFormField(
+              controller: _stepController,
+              decoration: InputDecoration(
+                labelText: '...',
+                labelStyle: TextStyle(
+                  color: Color.fromARGB(255, 43, 40, 40), // Dark text color
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10), // Rounded corners
+                  borderSide: BorderSide(
+                    color: Color.fromARGB(255, 43, 40, 40), // Dark border
+                  ),
                 ),
               ),
-            ),
-            maxLines: null, // Allow unlimited lines
-            keyboardType: TextInputType.multiline,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _steps[index]['text'] = _stepController.text;
-              });
-              Navigator.pop(context);
-            },
-            child: const Text(
-              'Uložiť',
-              style: TextStyle(
-                color: Color.fromARGB(255, 0, 0, 0), // Black text for save
-              ),
+              maxLines: null, // Allow unlimited lines
+              keyboardType: TextInputType.multiline,
             ),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text(
-              '✖',
-              style: TextStyle(
-                color: Color.fromARGB(255, 90, 29, 29), // Red text for cancel
-              ),
-            ),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-void _addStep() {
-  final TextEditingController _stepController = TextEditingController();
-
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        backgroundColor: Color.fromRGBO(242, 247, 251, 1.0), // Match your widget background color
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10), // Rounded corners
-        ),
-        title: const Text(
-          'Pridať krok',
-          style: TextStyle(
-            color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: TextFormField(
-            controller: _stepController,
-            decoration: InputDecoration(
-              labelText: 'Text kroku',
-              labelStyle: TextStyle(
-                color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10), // Rounded corners
-                borderSide: BorderSide(
-                  color: Color.fromARGB(255, 43, 40, 40), // Dark border
-                ),
-              ),
-            ),
-            maxLines: null, // Allow unlimited lines
-            keyboardType: TextInputType.multiline,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _steps.add({
-                  'number': _steps.length + 1,
-                  'text': _stepController.text,
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _steps[index]['text'] = _stepController.text;
                 });
-              });
-              Navigator.pop(context);
-            },
-            child: const Text(
-              'Pridať',
-              style: TextStyle(
-                color: Color.fromARGB(255, 0, 0, 0), // Black text for add
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Uložiť',
+                style: TextStyle(
+                  color: Color.fromARGB(255, 0, 0, 0), // Black text for save
+                ),
               ),
             ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text(
-              '✖',
-              style: TextStyle(
-                color: Color.fromARGB(255, 90, 29, 29), // Red text for cancel
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                '✖',
+                style: TextStyle(
+                  color: Color.fromARGB(255, 90, 29, 29), // Red text for cancel
+                ),
               ),
             ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _addStep() {
+    final TextEditingController _stepController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: Color.fromRGBO(
+            242,
+            247,
+            251,
+            1.0,
+          ), // Match your widget background color
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10), // Rounded corners
           ),
-        ],
-      );
-    },
-  );
-}
+          title: const Text(
+            'Pridať krok',
+            style: TextStyle(
+              color: Color.fromARGB(255, 43, 40, 40), // Dark text color
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: TextFormField(
+              controller: _stepController,
+              decoration: InputDecoration(
+                labelText: 'Text kroku',
+                labelStyle: TextStyle(
+                  color: Color.fromARGB(255, 43, 40, 40), // Dark text color
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10), // Rounded corners
+                  borderSide: BorderSide(
+                    color: Color.fromARGB(255, 43, 40, 40), // Dark border
+                  ),
+                ),
+              ),
+              maxLines: null, // Allow unlimited lines
+              keyboardType: TextInputType.multiline,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _steps.add({
+                    'number': _steps.length + 1,
+                    'text': _stepController.text,
+                  });
+                });
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Pridať',
+                style: TextStyle(
+                  color: Color.fromARGB(255, 0, 0, 0), // Black text for add
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                '✖',
+                style: TextStyle(
+                  color: Color.fromARGB(255, 90, 29, 29), // Red text for cancel
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -389,7 +436,7 @@ void _addStep() {
                       try {
                         Navigator.pop(context); // Go back to MojeRecepty
                       } catch (e) {
-                        print('Error navigating back: $e');
+                        print('Error 11: $e');
                       }
                     },
                   ),
@@ -470,64 +517,55 @@ void _addStep() {
                       // Your existing content here
 
                       // Image picker section
-                      SizedBox(
-                        height: 100, // Fixed height for the image carousel
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount:
-                              _selectedImages.length +
-                              1, // +1 for the add button
-                          itemBuilder: (context, index) {
-                            if (index == _selectedImages.length) {
-                              // Add button
-                              return GestureDetector(
-                                onTap: _pickImage,
-                                child: Container(
-                                  width: 100,
-                                  margin: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Color.fromRGBO(242, 247, 251, 1.0),
-                                    borderRadius: BorderRadius.circular(10),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.grey.withOpacity(
-                                          0.5,
-                                        ), // Shadow color
-                                        spreadRadius:
-                                            2, // How far the shadow spreads
-                                        blurRadius:
-                                            5, // How blurry the shadow is
-                                        offset: const Offset(
-                                          0,
-                                          3,
-                                        ), // Shadow offset (x, y)
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.add_a_photo,
-                                    size: 40,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              );
-                            } else {
-                              // Display selected images
-                              return Container(
-                                width: 100,
-                                margin: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  image: DecorationImage(
-                                    image: FileImage(_selectedImages[index]),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                      ),
+SizedBox(
+  height: 100, // Fixed height for the image carousel
+  child: ListView.builder(
+    scrollDirection: Axis.horizontal,
+    itemCount: _selectedImages.length + 1, // +1 for the add button
+    itemBuilder: (context, index) {
+      if (index == _selectedImages.length) {
+        // Add button
+        return GestureDetector(
+          onTap: _pickImage,
+          child: Container(
+            width: 100,
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Color.fromRGBO(242, 247, 251, 1.0),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.5),
+                  spreadRadius: 2,
+                  blurRadius: 5,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.add_a_photo,
+              size: 40,
+              color: Colors.grey,
+            ),
+          ),
+        );
+      } else {
+        // Display selected images
+        return Container(
+          width: 100,
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            image: DecorationImage(
+              image: FileImage(_selectedImages[index]),
+              fit: BoxFit.cover,
+            ),
+          ),
+        );
+      }
+    },
+  ),
+),
                       const SizedBox(height: 20),
                       // Názov receptu in a rounded rectangle
                       Container(
@@ -565,7 +603,7 @@ void _addStep() {
                               decoration: InputDecoration(
                                 hintText:
                                     _nazovController.text.isEmpty
-                                        ? 'Názov receptu'
+                                        ? '...'
                                         : null, // Use hintText instead of labelText
                                 border: InputBorder.none,
                               ),
@@ -640,7 +678,9 @@ void _addStep() {
                                     Icons.add,
                                     color: Colors.blue,
                                   ),
-                                  onPressed: _openKategoriaDialog,
+                                  onPressed: (){
+                                    functionsProvider.openKategoriaDialog(context, _nacitatKategorie);
+                                  },
                                 ),
                               ],
                             ),
@@ -701,7 +741,12 @@ void _addStep() {
                                         IconButton(
                                           icon: const Icon(
                                             Icons.close,
-                                            color: Color.fromARGB(255, 88, 88, 88),
+                                            color: Color.fromARGB(
+                                              255,
+                                              88,
+                                              88,
+                                              88,
+                                            ),
                                           ),
                                           onPressed: () {
                                             _showDeleteConfirmationDialog(
@@ -732,127 +777,187 @@ void _addStep() {
                       const SizedBox(height: 20),
                       // Postup in a rounded rectangle
                       Container(
-  decoration: BoxDecoration(
-    color: Color.fromRGBO(242, 247, 251, 1.0),
-    borderRadius: BorderRadius.circular(10),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.grey.withOpacity(0.5), // Shadow color
-        spreadRadius: 2, // How far the shadow spreads
-        blurRadius: 5, // How blurry the shadow is
-        offset: const Offset(0, 3), // Shadow offset (x, y)
-      ),
-    ],
-  ),
-  padding: const EdgeInsets.all(16),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // Postup heading with Krokovanie toggle
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Postup',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Row(
-            children: [
-              const Text('Krokovanie'),
-              Switch(
-                value: _isStepMode,
-                onChanged: (value) {
-                  setState(() {
-                    _isStepMode = value;
-                    if (!_isStepMode) {
-                      // Combine steps into a single string when switching to single-text-field mode
-                      _postupController.text = _steps.map((step) => '${step['number']} - ${step['text']}').join('\n');
-                    } else {
-                      // Parse the text into steps when switching to step-by-step mode
-                      _steps.clear();
-                      final lines = _postupController.text.split('\n');
-                      for (var i = 0; i < lines.length; i++) {
-                        _steps.add({
-                          'number': i + 1,
-                          'text': lines[i].replaceAll('${i + 1} - ', ''), // Remove step numbers if present
-                        });
-                      }
-                    }
-                  });
-                },
-                inactiveThumbColor: Color.fromARGB(255, 88, 88, 88),
-                activeColor: const Color.fromARGB(255, 88, 88, 88), // Toggle color
-                inactiveTrackColor: const Color.fromARGB(255, 255, 255, 255), // Toggle track color
-                activeTrackColor: const Color.fromARGB(255, 255, 255, 255), // Toggle track color
-              ),
-            ],
-          ),
-        ],
-      ),
-      const SizedBox(height: 10),
-      if (_isStepMode)
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _steps.length + 1, // +1 for the "Add Step" button
-          itemBuilder: (context, index) {
-            if (index < _steps.length) {
-              // Display existing steps
-              final step = _steps[index];
-              return ListTile(
-                
-                title: Text('${step['number']} - ${step['text']}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue), // Edit button
-                      onPressed: () {
-                        _editStep(index);
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Color.fromARGB(255, 88, 88, 88)), // Remove button
-                      onPressed: () {
-                        _removeStep(index); // Call the method to remove the step
-                      },
-                    ),
-                  ],
-                ),
-              );
-            } else {
-              // Display "Add Step" button
-              return ListTile(
-                title: const Text('Pridať krok'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.add, color: Colors.blue),
-                  onPressed: _addStep,
-                ),
-              );
-            }
-          },
-        ),
-      if (!_isStepMode)
-        TextFormField(
-          controller: _postupController,
-          decoration: InputDecoration(
-            hintText: _postupController.text.isEmpty ? '...' : null, // Use hintText instead of labelText
-            border: InputBorder.none,
-          ),
-          maxLines: 5,
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Postup je povinný!';
-            }
-            return null;
-          },
-        ),
-    ],
-  ),
-),
+                        decoration: BoxDecoration(
+                          color: Color.fromRGBO(242, 247, 251, 1.0),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(
+                                0.5,
+                              ), // Shadow color
+                              spreadRadius: 2, // How far the shadow spreads
+                              blurRadius: 5, // How blurry the shadow is
+                              offset: const Offset(
+                                0,
+                                3,
+                              ), // Shadow offset (x, y)
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Postup heading with Krokovanie toggle
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Postup',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    const Text('Krokovanie'),
+                                    Switch(
+                                      value: _isStepMode,
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _isStepMode = value;
+                                          if (!_isStepMode) {
+                                            // Combine steps into a single string when switching to single-text-field mode
+                                            _postupController.text = _steps
+                                                .map(
+                                                  (step) =>
+                                                      '${step['number']} - ${step['text']}',
+                                                )
+                                                .join('\n');
+                                          } else {
+                                            // Parse the text into steps when switching to step-by-step mode
+                                            _steps.clear();
+                                            final lines = _postupController.text
+                                                .split('\n');
+                                            for (
+                                              var i = 0;
+                                              i < lines.length;
+                                              i++
+                                            ) {
+                                              _steps.add({
+                                                'number': i + 1,
+                                                'text': lines[i].replaceAll(
+                                                  '${i + 1} - ',
+                                                  '',
+                                                ), // Remove step numbers if present
+                                              });
+                                            }
+                                          }
+                                        });
+                                      },
+                                      inactiveThumbColor: Color.fromARGB(
+                                        255,
+                                        88,
+                                        88,
+                                        88,
+                                      ),
+                                      activeColor: const Color.fromARGB(
+                                        255,
+                                        88,
+                                        88,
+                                        88,
+                                      ), // Toggle color
+                                      inactiveTrackColor: const Color.fromARGB(
+                                        255,
+                                        255,
+                                        255,
+                                        255,
+                                      ), // Toggle track color
+                                      activeTrackColor: const Color.fromARGB(
+                                        255,
+                                        255,
+                                        255,
+                                        255,
+                                      ), // Toggle track color
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            if (_isStepMode)
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount:
+                                    _steps.length +
+                                    1, // +1 for the "Add Step" button
+                                itemBuilder: (context, index) {
+                                  if (index < _steps.length) {
+                                    // Display existing steps
+                                    final step = _steps[index];
+                                    return ListTile(
+                                      title: Text(
+                                        '${step['number']} - ${step['text']}',
+                                      ),
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.edit,
+                                              color: Colors.blue,
+                                            ), // Edit button
+                                            onPressed: () {
+                                              _editStep(index);
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.close,
+                                              color: Color.fromARGB(
+                                                255,
+                                                88,
+                                                88,
+                                                88,
+                                              ),
+                                            ), // Remove button
+                                            onPressed: () {
+                                              _removeStep(
+                                                index,
+                                              ); // Call the method to remove the step
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  } else {
+                                    // Display "Add Step" button
+                                    return ListTile(
+                                      title: const Text('Pridať krok'),
+                                      trailing: IconButton(
+                                        icon: const Icon(
+                                          Icons.add,
+                                          color: Colors.blue,
+                                        ),
+                                        onPressed: _addStep,
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            if (!_isStepMode)
+                              TextFormField(
+                                controller: _postupController,
+                                decoration: InputDecoration(
+                                  hintText:
+                                      _postupController.text.isEmpty
+                                          ? '...'
+                                          : null, // Use hintText instead of labelText
+                                  border: InputBorder.none,
+                                ),
+                                maxLines: 5,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Postup je povinný!';
+                                  }
+                                  return null;
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
 
                       const SizedBox(height: 20),
                       // Poznámky in a rounded rectangle
@@ -891,7 +996,7 @@ void _addStep() {
                               decoration: InputDecoration(
                                 hintText:
                                     _poznamkyController.text.isEmpty
-                                        ? 'Poznámky'
+                                        ? '...'
                                         : null, // Use hintText instead of labelText
                                 border: InputBorder.none,
                               ),
@@ -909,576 +1014,430 @@ void _addStep() {
               ],
             ),
           ),
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(
+                0.5,
+              ), // Semi-transparent background
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.blue,
+                  ), // Customize color
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
-void _openPostupDialog() {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            backgroundColor: Color.fromRGBO(242, 247, 251, 1.0), // Match your widget background color
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10), // Rounded corners
-            ),
-            title: const Text(
-              "Postup",
-              style: TextStyle(
-                color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: Container(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Postup heading with Krokovanie toggle
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Postup',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          const Text('Krokovanie'),
-                          Switch(
-                            value: _isStepMode,
-                            onChanged: (value) {
-                              setStateDialog(() {
-                                _isStepMode = value;
-                                if (!_isStepMode) {
-                                  // Combine steps into a single string when switching to single-text-field mode
-                                  _postupController.text = _steps.map((step) => '${step['number']} - ${step['text']}').join('\n');
-                                } else {
-                                  // Parse the text into steps when switching to step-by-step mode
-                                  _steps.clear();
-                                  final lines = _postupController.text.split('\n');
-                                  for (var i = 0; i < lines.length; i++) {
-                                    _steps.add({
-                                      'number': i + 1,
-                                      'text': lines[i].replaceAll('${i + 1} - ', ''), // Remove step numbers if present
-                                    });
-                                  }
-                                }
-                              });
-                            },
-                            inactiveThumbColor: Color.fromARGB(255, 88, 88, 88),
-                            activeColor: const Color.fromARGB(255, 88, 88, 88), // Toggle color
-                            inactiveTrackColor: const Color.fromARGB(255, 255, 255, 255), // Toggle track color
-                            activeTrackColor: const Color.fromARGB(255, 255, 255, 255), // Toggle track color
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  if (_isStepMode)
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _steps.length + 1, // +1 for the "Add Step" button
-                      itemBuilder: (context, index) {
-                        if (index < _steps.length) {
-                          // Display existing steps
-                          final step = _steps[index];
-                          return ListTile(
-                            title: Text('${step['number']} - ${step['text']}'),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.blue), // Edit button
-                                  onPressed: () {
-                                    _editStep(index);
-                                  },
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close, color: Color.fromARGB(255, 88, 88, 88)), // Remove button
-                                  onPressed: () {
-                                    _removeStep(index); // Call the method to remove the step
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        } else {
-                          // Display "Add Step" button
-                          return ListTile(
-                            title: const Text('Pridať krok'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.add, color: Colors.blue),
-                              onPressed: _addStep,
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  if (!_isStepMode)
-                    TextFormField(
-                      controller: _postupController,
-                      decoration: InputDecoration(
-                        hintText: _postupController.text.isEmpty ? '...' : null, // Use hintText instead of labelText
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10), // Rounded corners
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 43, 40, 40), // Dark border
-                          ),
-                        ),
-                      ),
-                      maxLines: 5,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Postup je povinný!';
-                        }
-                        return null;
-                      },
-                    ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  '✖ Zrušiť',
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 90, 29, 29), // red text for cancel
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  // Handle the save logic here
-                  Navigator.pop(context);
-                },
-                child: const Text(
-                  ' ✔ Uložiť',
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 0, 0, 0), // Black text for save
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
+
   void _showDeleteConfirmationDialog(String ingrediencia) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        backgroundColor: Color.fromRGBO(242, 247, 251, 1.0), // Match your widget background color
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10), // Rounded corners
-        ),
-        title: const Text(
-          'Potvrdenie',
-          style: TextStyle(
-            color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-            fontWeight: FontWeight.bold,
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Color.fromRGBO(
+            242,
+            247,
+            251,
+            1.0,
+          ), // Match your widget background color
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10), // Rounded corners
           ),
-        ),
-        content: const Text(
-          'Naozaj chcete odstrániť túto ingredienciu?',
-          style: TextStyle(
-            color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Zrušiť',
-              style: TextStyle(
-                color: Color.fromARGB(255, 0, 0, 0), // Blue text for cancel
-              ),
+          title: const Text(
+            'Potvrdenie',
+            style: TextStyle(
+              color: Color.fromARGB(255, 43, 40, 40), // Dark text color
+              fontWeight: FontWeight.bold,
             ),
           ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _ingrediencie.remove(ingrediencia);
-              });
-              Navigator.pop(context);
-            },
-            child: const Text(
-              'Odstrániť',
-              style: TextStyle(
-                color: Colors.red, // Red text for delete
-              ),
+          content: const Text(
+            'Naozaj chcete odstrániť túto ingredienciu?',
+            style: TextStyle(
+              color: Color.fromARGB(255, 43, 40, 40), // Dark text color
             ),
           ),
-        ],
-      );
-    },
-  );
-}
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Zrušiť',
+                style: TextStyle(
+                  color: Color.fromARGB(255, 0, 0, 0), // Blue text for cancel
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _ingrediencie.remove(ingrediencia);
+                });
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Odstrániť',
+                style: TextStyle(
+                  color: Colors.red, // Red text for delete
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _openIngrediencieDialog() {
-  _novaIngrediencia = null;
-  _mnozstvo = null;
-  _selectedUnit = '...'; // Default unit
+    _novaIngrediencia = null;
+    _mnozstvo = null;
+    _selectedUnit = '...'; // Default unit
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            backgroundColor: Color.fromRGBO(242, 247, 251, 1.0), // Match your widget background color
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10), // Rounded corners
-            ),
-            title: const Text(
-              "Pridať ingredienciu",
-              style: TextStyle(
-                color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-                fontWeight: FontWeight.bold,
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: Color.fromRGBO(
+                242,
+                247,
+                251,
+                1.0,
+              ), // Match your widget background color
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10), // Rounded corners
               ),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  onChanged: (value) {
-                    setStateDialog(() => _novaIngrediencia = value);
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'Názov ingrediencie',
-                    labelStyle: TextStyle(
-                      color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10), // Rounded corners
-                      borderSide: BorderSide(
-                        color: Color.fromARGB(255, 43, 40, 40), // Dark border
-                      ),
-                    ),
-                  ),
+              title: const Text(
+                "Pridať ingredienciu",
+                style: TextStyle(
+                  color: Color.fromARGB(255, 43, 40, 40), // Dark text color
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    setStateDialog(() => _mnozstvo = double.tryParse(value));
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'Množstvo (voliteľné)',
-                    labelStyle: TextStyle(
-                      color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10), // Rounded corners
-                      borderSide: BorderSide(
-                        color: Color.fromARGB(255, 43, 40, 40), // Dark border
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    onChanged: (value) {
+                      setStateDialog(() => _novaIngrediencia = value);
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Názov ingrediencie',
+                      labelStyle: TextStyle(
+                        color: Color.fromARGB(
+                          255,
+                          43,
+                          40,
+                          40,
+                        ), // Dark text color
                       ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                DropdownButton<String>(
-                  value: _selectedUnit,
-                  onChanged: (String? newValue) {
-                    setStateDialog(() => _selectedUnit = newValue!);
-                  },
-                  items: _units.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(
-                        value,
-                        style: TextStyle(
-                          color: Color.fromARGB(255, 43, 40, 40), // Dark text color
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          10,
+                        ), // Rounded corners
+                        borderSide: BorderSide(
+                          color: Color.fromARGB(255, 43, 40, 40), // Dark border
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      setStateDialog(() => _mnozstvo = double.tryParse(value));
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Množstvo (voliteľné)',
+                      labelStyle: TextStyle(
+                        color: Color.fromARGB(
+                          255,
+                          43,
+                          40,
+                          40,
+                        ), // Dark text color
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          10,
+                        ), // Rounded corners
+                        borderSide: BorderSide(
+                          color: Color.fromARGB(255, 43, 40, 40), // Dark border
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButton<String>(
+                    value: _selectedUnit,
+                    onChanged: (String? newValue) {
+                      setStateDialog(() => _selectedUnit = newValue!);
+                    },
+                    items:
+                        _units.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(
+                              value,
+                              style: TextStyle(
+                                color: Color.fromARGB(
+                                  255,
+                                  43,
+                                  40,
+                                  40,
+                                ), // Dark text color
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    '✖',
+                    style: TextStyle(
+                      color: Color.fromARGB(
+                        255,
+                        90,
+                        29,
+                        29,
+                      ), // Blue text for cancel
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed:
+                      _novaIngrediencia != null &&
+                              _novaIngrediencia!.trim().isNotEmpty
+                          ? () {
+                            setState(() {
+                              // Format the ingredient string: ingredient amount unit
+                              String ingredientString = _novaIngrediencia!;
+                              if (_mnozstvo != null) {
+                                ingredientString += ' $_mnozstvo';
+                              }
+                              if (_selectedUnit != '...') {
+                                ingredientString += ' $_selectedUnit';
+                              }
+
+                              _ingrediencie.add(ingredientString.trim());
+                            });
+                            Navigator.pop(context);
+                          }
+                          : null,
+                  child: const Text(
+                    'Pridať',
+                    style: TextStyle(
+                      color: Color.fromARGB(255, 0, 0, 0), // Green text for add
+                    ),
+                  ),
                 ),
               ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  '✖',
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 90, 29, 29), // Blue text for cancel
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: _novaIngrediencia != null &&
-                        _novaIngrediencia!.trim().isNotEmpty
-                    ? () {
-                        setState(() {
-                          // Format the ingredient string: ingredient amount unit
-                          String ingredientString = _novaIngrediencia!;
-                          if (_mnozstvo != null) {
-                            ingredientString += ' $_mnozstvo';
-                          }
-                          if (_selectedUnit != '...') {
-                            ingredientString += ' $_selectedUnit';
-                          }
+            );
+          },
+        );
+      },
+    );
+  }
 
-                          _ingrediencie.add(ingredientString.trim());
-                        });
-                        Navigator.pop(context);
-                      }
-                    : null,
-                child: const Text(
-                  'Pridať',
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 0, 0, 0), // Green text for add
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
+  void _openUpdateIngrediencieDialog(String ingrediencia) {
+    // Split the ingredient into parts
+    final parts = ingrediencia.split(' ');
+    double? mnozstvo;
+    String? jednotka;
+    String nazov = '';
 
-void _openUpdateIngrediencieDialog(String ingrediencia) {
-  // Split the ingredient into parts
-  final parts = ingrediencia.split(' ');
-  double? mnozstvo;
-  String? jednotka;
-  String nazov = '';
-
-  // Parse the ingredient, amount, and unit
-  if (parts.isNotEmpty) {
-    nazov = parts[0]; // The first part is always the ingredient name
-    if (parts.length > 1) {
-      // Check if the second part is a number (amount)
-      mnozstvo = double.tryParse(parts[1]);
-      if (mnozstvo != null && parts.length > 2) {
-        // The third part is the unit
-        jednotka = parts[2];
-      } else if (parts.length > 1) {
-        // If the second part is not a number, it's the unit
-        jednotka = parts[1];
+    // Parse the ingredient, amount, and unit
+    if (parts.isNotEmpty) {
+      nazov = parts[0]; // The first part is always the ingredient name
+      if (parts.length > 1) {
+        // Check if the second part is a number (amount)
+        mnozstvo = double.tryParse(parts[1]);
+        if (mnozstvo != null && parts.length > 2) {
+          // The third part is the unit
+          jednotka = parts[2];
+        } else if (parts.length > 1) {
+          // If the second part is not a number, it's the unit
+          jednotka = parts[1];
+        }
       }
     }
-  }
 
-  // Ensure the unit is valid
-  if (jednotka != null && !_units.contains(jednotka)) {
-    jednotka = '...'; // Default to '...' if the unit is invalid
-  }
+    // Ensure the unit is valid
+    if (jednotka != null && !_units.contains(jednotka)) {
+      jednotka = '...'; // Default to '...' if the unit is invalid
+    }
 
-  _novaIngrediencia = nazov;
-  _mnozstvo = mnozstvo;
-  _selectedUnit = jednotka ?? '...'; // Default to '...' if no unit is specified
+    _novaIngrediencia = nazov;
+    _mnozstvo = mnozstvo;
+    _selectedUnit =
+        jednotka ?? '...'; // Default to '...' if no unit is specified
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            backgroundColor: Color.fromRGBO(242, 247, 251, 1.0), // Match your widget background color
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10), // Rounded corners
-            ),
-            title: const Text(
-              "Upraviť ingredienciu",
-              style: TextStyle(
-                color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-                fontWeight: FontWeight.bold,
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: Color.fromRGBO(
+                242,
+                247,
+                251,
+                1.0,
+              ), // Match your widget background color
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10), // Rounded corners
               ),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  initialValue: nazov,
-                  onChanged: (value) {
-                    setStateDialog(() => _novaIngrediencia = value);
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'Názov ingrediencie',
-                    labelStyle: TextStyle(
-                      color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10), // Rounded corners
-                      borderSide: BorderSide(
-                        color: Color.fromARGB(255, 43, 40, 40), // Dark border
-                      ),
-                    ),
-                  ),
+              title: const Text(
+                "Upraviť ingredienciu",
+                style: TextStyle(
+                  color: Color.fromARGB(255, 43, 40, 40), // Dark text color
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  initialValue: mnozstvo?.toString(),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    setStateDialog(() => _mnozstvo = double.tryParse(value));
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'Množstvo (voliteľné)',
-                    labelStyle: TextStyle(
-                      color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10), // Rounded corners
-                      borderSide: BorderSide(
-                        color: Color.fromARGB(255, 43, 40, 40), // Dark border
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    initialValue: nazov,
+                    onChanged: (value) {
+                      setStateDialog(() => _novaIngrediencia = value);
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Názov ingrediencie',
+                      labelStyle: TextStyle(
+                        color: Color.fromARGB(
+                          255,
+                          43,
+                          40,
+                          40,
+                        ), // Dark text color
                       ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                DropdownButton<String>(
-                  value: _selectedUnit,
-                  onChanged: (String? newValue) {
-                    setStateDialog(() => _selectedUnit = newValue!);
-                  },
-                  items: _units.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(
-                        value,
-                        style: TextStyle(
-                          color: Color.fromARGB(255, 43, 40, 40), // Dark text color
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          10,
+                        ), // Rounded corners
+                        borderSide: BorderSide(
+                          color: Color.fromARGB(255, 43, 40, 40), // Dark border
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    initialValue: mnozstvo?.toString(),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      setStateDialog(() => _mnozstvo = double.tryParse(value));
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Množstvo (voliteľné)',
+                      labelStyle: TextStyle(
+                        color: Color.fromARGB(
+                          255,
+                          43,
+                          40,
+                          40,
+                        ), // Dark text color
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          10,
+                        ), // Rounded corners
+                        borderSide: BorderSide(
+                          color: Color.fromARGB(255, 43, 40, 40), // Dark border
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButton<String>(
+                    value: _selectedUnit,
+                    onChanged: (String? newValue) {
+                      setStateDialog(() => _selectedUnit = newValue!);
+                    },
+                    items:
+                        _units.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(
+                              value,
+                              style: TextStyle(
+                                color: Color.fromARGB(
+                                  255,
+                                  43,
+                                  40,
+                                  40,
+                                ), // Dark text color
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    '✖',
+                    style: TextStyle(
+                      color: Color.fromARGB(
+                        255,
+                        90,
+                        29,
+                        29,
+                      ), // Red text for cancel
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed:
+                      _novaIngrediencia != null &&
+                              _novaIngrediencia!.trim().isNotEmpty
+                          ? () {
+                            setState(() {
+                              // Format the ingredient string: ingredient amount unit
+                              String ingredientString = _novaIngrediencia!;
+                              if (_mnozstvo != null) {
+                                ingredientString += ' $_mnozstvo';
+                              }
+                              if (_selectedUnit != '...') {
+                                ingredientString += ' $_selectedUnit';
+                              }
+
+                              final index = _ingrediencie.indexOf(ingrediencia);
+                              if (index != -1) {
+                                _ingrediencie[index] = ingredientString.trim();
+                              }
+                            });
+                            Navigator.pop(context);
+                          }
+                          : null,
+                  child: const Text(
+                    'Uložiť',
+                    style: TextStyle(
+                      color: Color.fromARGB(
+                        255,
+                        0,
+                        0,
+                        0,
+                      ), // Black text for save
+                    ),
+                  ),
                 ),
               ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  '✖',
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 90, 29, 29), // Red text for cancel
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: _novaIngrediencia != null &&
-                        _novaIngrediencia!.trim().isNotEmpty
-                    ? () {
-                        setState(() {
-                          // Format the ingredient string: ingredient amount unit
-                          String ingredientString = _novaIngrediencia!;
-                          if (_mnozstvo != null) {
-                            ingredientString += ' $_mnozstvo';
-                          }
-                          if (_selectedUnit != '...') {
-                            ingredientString += ' $_selectedUnit';
-                          }
+            );
+          },
+        );
+      },
+    );
+  }
 
-                          final index = _ingrediencie.indexOf(ingrediencia);
-                          if (index != -1) {
-                            _ingrediencie[index] = ingredientString.trim();
-                          }
-                        });
-                        Navigator.pop(context);
-                      }
-                    : null,
-                child: const Text(
-                  'Uložiť',
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 0, 0, 0), // Black text for save
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
-
-  void _openKategoriaDialog() {
-  String? _novaKategoria;
-
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            backgroundColor: Color.fromRGBO(242, 247, 251, 1.0), // Match your widget background color
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10), // Rounded corners
-            ),
-            title: const Text(
-              "Pridať kategóriu",
-              style: TextStyle(
-                color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: TextFormField(
-              onChanged: (value) {
-                setStateDialog(() {
-                  _novaKategoria = value;
-                });
-              },
-              decoration: InputDecoration(
-                labelText: 'Názov kategórie',
-                labelStyle: TextStyle(
-                  color: Color.fromARGB(255, 43, 40, 40), // Dark text color
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10), // Rounded corners
-                  borderSide: BorderSide(
-                    color: Color.fromARGB(255, 43, 40, 40), // Dark border
-                  ),
-                ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  '✖ Zrušiť',
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 90, 29, 29), // red text for cancel
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: _novaKategoria != null &&
-                        _novaKategoria!.trim().isNotEmpty
-                    ? () async {
-                        await _dbHelper.insertKategoria(_novaKategoria!);
-                        _nacitatKategorie();
-                        Navigator.pop(context);
-                      }
-                    : null,
-                child: const Text(
-                  ' ✔ Pridať',
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 0, 0, 0), // Black text for add
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
+  
 }
