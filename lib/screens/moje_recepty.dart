@@ -1,3 +1,4 @@
+// moje_recepty.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/recept_provider.dart';
@@ -5,7 +6,9 @@ import '../providers/functions_provider.dart';
 import 'detail_receptu.dart';
 import 'pridat_recept.dart';
 import 'dart:io';
-import 'dart:ui'; // Import for ImageFilter
+import 'dart:ui';
+import 'dart:convert'; 
+import 'package:intl/intl.dart';
 
 class MojeRecepty extends StatefulWidget {
   const MojeRecepty({super.key});
@@ -172,6 +175,7 @@ class BottomDesign extends StatelessWidget {
                   0,
                   0,
                   0,
+                
                 ), // Semi-transparent overlay
               ),
             ),
@@ -186,7 +190,7 @@ class _MojeReceptyState extends State<MojeRecepty> {
   String _searchQuery = '';
   String? _selectedFilterKategoria;
   bool _isSearchVisible = false;
-  bool _showFavoritesOnly = false; // State for favorites filter
+ // Remove favorites filter
 
   late FunctionsProvider functionsProvider;
   late ReceptProvider receptProvider;
@@ -287,22 +291,7 @@ class _MojeReceptyState extends State<MojeRecepty> {
                     ],
                   ),
                   actions: [
-                    IconButton(
-                      icon: Icon(
-                        _showFavoritesOnly ? Icons.star : Icons.star_border,
-                        color: _showFavoritesOnly ? Colors.amber : const Color.fromARGB(255, 88, 88, 88),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _showFavoritesOnly = !_showFavoritesOnly;
-                          if (_showFavoritesOnly) {
-                            // Reset search and category filters when showing favorites
-                            _searchQuery = '';
-                            _selectedFilterKategoria = null;
-                          }
-                        });
-                      },
-                    ),
+                    // Removed star icon
                     IconButton(
                       icon: const Icon(Icons.search),
                       onPressed: () {
@@ -346,55 +335,66 @@ class _MojeReceptyState extends State<MojeRecepty> {
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
-  children: [
-    // Filter Text with Arrow Icon
-    Expanded(
-      child: TextButton(
-        onPressed: () {
-          _showCategoryFilterDialog(context); // Show the pop-up dialog
-        },
-        style: TextButton.styleFrom(
-          alignment: Alignment.centerLeft, // Align text to the left
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Padding inside the button
-        ),
-        child: Row(
-          children: [
-            Text(
-              _selectedFilterKategoria ?? 'Filtrovať podľa kategórie',
-              style: TextStyle(
-                fontSize: 16,
-                color: const Color.fromARGB(255, 50, 50, 50), // Slightly gray text
-              ),
-            ),
-            const SizedBox(width: 8), // Spacing between text and arrow
-            Icon(
-              Icons.arrow_forward_ios, // Arrow icon
-              size: 14, // Icon size
-              color: const Color.fromARGB(255, 50, 50, 50), // Match the text color
-            ),
-          ],
-        ),
-      ),
-    ),
-    const SizedBox(width: 10), // Spacing between filter button and "Pridať" button
-    // "Pridať" Button
-    TextButton(
-      onPressed: () {
-        functionsProvider.openKategoriaDialog(context, () {
-          // Callback to refresh categories
-          receptProvider.nacitatKategorie();
-        });
-      },
-      child: const Text(
-        'Pridať',
-        style: TextStyle(
-          color: Colors.blue, // Match the color of the previous icon
-          fontSize: 16, // Adjust font size as needed
-        ),
-      ),
-    ),
-  ],
-),
+                    children: [
+                      // Filter Text with Arrow Icon
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            _showCategoryFilterDialog(
+                                context); // Show the pop-up dialog
+                          },
+                          style: TextButton.styleFrom(
+                            alignment:
+                                Alignment.centerLeft, // Align text to the left
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12), // Padding inside the button
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                _selectedFilterKategoria ??
+                                    'Filtrovať podľa kategórie',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: const Color.fromARGB(
+                                      255, 50, 50, 50), // Slightly gray text
+                                ),
+                              ),
+                              const SizedBox(
+                                  width: 8), // Spacing between text and arrow
+                              Icon(
+                                Icons.arrow_forward_ios, // Arrow icon
+                                size: 14, // Icon size
+                                color: const Color.fromARGB(255, 50, 50,
+                                    50), // Match the text color
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(
+                          width:
+                              10), // Spacing between filter button and "Pridať" button
+                      // "Pridať" Button
+                      TextButton(
+                        onPressed: () {
+                          functionsProvider.openKategoriaDialog(context, () {
+                            // Callback to refresh categories
+                            receptProvider.nacitatKategorie();
+                          });
+                        },
+                        child: const Text(
+                          'Pridať',
+                          style: TextStyle(
+                            color:
+                                Colors.blue, // Match the color of the previous icon
+                            fontSize: 16, // Adjust font size as needed
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 Expanded(child: _buildReceptyList(receptProvider)),
               ],
@@ -406,196 +406,257 @@ class _MojeReceptyState extends State<MojeRecepty> {
     );
   }
 
-  Widget _buildReceptyList(ReceptProvider receptProvider) {
-    return Consumer<ReceptProvider>(
-      builder: (context, receptProvider, child) {
-        final recepty = receptProvider.recepty;
-        final filtrovaneRecepty = recepty.where((recept) {
-          final matchesSearch = recept['nazov'].toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              );
-          final matchesCategory =
-              _selectedFilterKategoria == null ||
-                  (_selectedFilterKategoria == 'Bez kategórie'
-                      ? recept['kategoria'] == null || recept['kategoria'].isEmpty
-                      : recept['kategoria'] == _selectedFilterKategoria);
-          final matchesFavorites =
-              !_showFavoritesOnly || recept['isFavorite'] == 1;
-          return matchesSearch && matchesCategory && matchesFavorites;
-        }).toList();
+Widget _buildReceptyList(ReceptProvider receptProvider) {
+  return Consumer<ReceptProvider>(
+    builder: (context, receptProvider, child) {
+      final recepty = receptProvider.recepty;
+      final filtrovaneRecepty = recepty.where((recept) {
+        final matchesSearch = recept['nazov']
+            .toLowerCase()
+            .contains(_searchQuery.toLowerCase());
 
-        if (filtrovaneRecepty.isEmpty) {
-          return const Center(child: Text('Žiadne recepty.'));
+        bool matchesCategoryOrFavorites;
+        if (_selectedFilterKategoria == 'Obľúbené') {
+          matchesCategoryOrFavorites = recept['isFavorite'] == 1;
+        } else {
+          matchesCategoryOrFavorites = _selectedFilterKategoria == null ||
+              (_selectedFilterKategoria == 'Bez kategórie'
+                  ? recept['kategoria'] == null || recept['kategoria'].isEmpty
+                  : recept['kategoria'] == _selectedFilterKategoria);
         }
 
-        final kategorie = _zoskupitReceptyPodlaKategorie(filtrovaneRecepty);
+        return matchesSearch && matchesCategoryOrFavorites;
+      }).toList();
 
-        return ListView.builder(
-          itemCount: kategorie.length,
-          itemBuilder: (context, index) {
-            final kategoria = kategorie.keys.elementAt(index);
-            final receptyVKategorii = kategorie[kategoria]!;
+      if (filtrovaneRecepty.isEmpty) {
+        return const Center(child: Text('Žiadne recepty.'));
+      }
 
-            return Padding(
-              
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0, // Add horizontal padding
-                vertical: 8.0, // Add vertical padding
-              ),
-              child: CustomExpansionTile(
-                
-                title: kategoria,
-                children: [
-                  ...receptyVKategorii.map((recept) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, // Add horizontal padding
-                        vertical: 8.0, // Add vertical padding
+      final kategorie = _zoskupitReceptyPodlaKategorie(filtrovaneRecepty);
+
+      return ListView.builder(
+        itemCount: kategorie.length,
+        itemBuilder: (context, index) {
+          final kategoria = kategorie.keys.elementAt(index);
+          final receptyVKategorii = kategorie[kategoria]!;
+
+          return Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: CustomExpansionTile(
+              title: kategoria,
+              children: [
+                ...receptyVKategorii.map((recept) {
+                  return Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      color: const Color.fromRGBO(242, 247, 251, 1.0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Card(
-                        margin: EdgeInsets.zero, // Remove default margin
-                        color: Color.fromRGBO(242, 247, 251, 1.0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10), // Rounded corners
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16.0, // Add padding inside the ListTile
-                          ),
-                          leading: recept['obrazokPath'] != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(8), // Rounded corners for image
-                                  child: Image.file(
-                                    File(recept['obrazokPath']),
-                                    width: 50,
-                                    height: 50,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.image,
-                                  size: 50,
-                                ), // Placeholder if no image
-                          title: Text(
-                            recept['nazov'],
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Text(
-                            recept['vytvorene'] ?? '',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          trailing: IconButton(
-                            icon: Icon(
-                              recept['isFavorite'] == 1
-                                  ? Icons.star
-                                  : Icons.star_border,
-                              color: recept['isFavorite'] == 1
-                                  ? Colors.amber
-                                  : Colors.grey,
-                            ),
-                            onPressed: () {
-                              receptProvider.toggleFavorite(recept['id']);
-                            },
-                          ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => DetailReceptu(recept: recept),
+                      child: Row( // Use a Row to arrange image and text
+                        crossAxisAlignment: CrossAxisAlignment.start, // Align items to the top
+                        children: [
+                          _buildRecipeImage(recept), // Image on the left
+                          Expanded( // Take remaining space
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16.0,
+                                vertical: 8.0, // Add vertical padding
                               ),
-                            );
-                          },
-                        ),
+                              title: Text(
+                                recept['nazov'],
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                // Align text to the start
+                                children: [
+                                  if (recept['vytvorene'] != null) ...[
+                                    Text(
+                                      _formatDate(recept['vytvorene']),
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                  if (recept['poznamky'] != null &&
+                                      recept['poznamky']
+                                          .isNotEmpty) ...[ //Check for null and emptiness
+                                    const SizedBox(height: 4), // Add spacing
+                                    Text(
+                                      'Poznámky: ${recept['poznamky']}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                      ),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis, // Handle long notes
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        DetailReceptu(recept: recept),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ),
-                    );
-                  }).toList(),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Map<String, List<Map<String, dynamic>>> _zoskupitReceptyPodlaKategorie(
-  List<Map<String, dynamic>> recepty,
-) {
-  final kategorie = <String, List<Map<String, dynamic>>>{};
-
-  for (final recept in recepty) {
-    // Explicitly handle "Bez kategórie"
-    final kategoria = recept['kategoria']?.isEmpty ?? true
-        ? 'Bez kategórie'
-        : recept['kategoria'];
-    if (!kategorie.containsKey(kategoria)) {
-      kategorie[kategoria] = [];
-    }
-    kategorie[kategoria]!.add(recept);
-  }
-
-  return kategorie;
-}
-
-void _showCategoryFilterDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10), // Rounded corners
-        ),
-        contentPadding: const EdgeInsets.all(16),
-        content: Column(
-          mainAxisSize: MainAxisSize.min, // Fit the content
-          children: [
-            const Text(
-              'Vyberte kategóriu',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+                    ),
+                  );
+                }).toList(),
+              ],
             ),
-            const SizedBox(height: 16),
-            ...receptProvider.kategorie.map((kategoria) {
-              return ListTile(
-                title: Text(kategoria),
-                onTap: () {
-                  setState(() {
-                    _selectedFilterKategoria = kategoria;
-                  });
-                  Navigator.pop(context); // Close the dialog
-                },
-              );
-            }).toList(),
-            ListTile(
-              title: const Text('Všetky kategórie'),
-              onTap: () {
-                setState(() {
-                  _selectedFilterKategoria = null; // Reset filter
-                });
-                Navigator.pop(context); // Close the dialog
-              },
-            ),
-            ListTile(
-              title: const Text('Bez kategórie'),
-              onTap: () {
-                setState(() {
-                  _selectedFilterKategoria = 'Bez kategórie';
-                });
-                Navigator.pop(context); // Close the dialog
-              },
-            ),
-          ],
-        ),
+          );
+        },
       );
     },
   );
 }
+
+// Helper function to format the date
+String _formatDate(String? dateString) {
+  if (dateString == null) {
+    return '';
+  }
+  try {
+    final date = DateTime.parse(dateString);
+    return DateFormat('dd.MM.yyyy').format(date); // Format as day.month.year
+  } catch (e) {
+    return ''; // Return empty string if parsing fails.
+  }
+}
+
+Widget _buildRecipeImage(Map<String, dynamic> recept) {
+  if (recept['obrazky'] != null) {
+    try {
+      final dynamic decodedImagePaths = jsonDecode(recept['obrazky']);
+      List<String> imagePaths = [];
+
+      if (decodedImagePaths is String) {
+        imagePaths = [decodedImagePaths]; // If it's a single path
+      } else if (decodedImagePaths is List<dynamic>) {
+        imagePaths = decodedImagePaths.cast<String>();
+      }
+
+      // Check if the list is not empty and the first file exists
+      if (imagePaths.isNotEmpty && File(imagePaths.first).existsSync()) {
+        return ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(10),     // Top-left corner
+            bottomLeft: Radius.circular(10),  // Bottom-left corner
+          ),
+          child: Image.file(
+            File(imagePaths.first), // Display the *first* image
+            width: 100, // Fixed width, adjust as needed
+            height: 120, // Fixed height for consistency
+            fit: BoxFit.cover,
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error decoding or accessing image paths: $e");
+      return const SizedBox(width: 100, height: 120, child: Icon(Icons.image)); // Fallback with size
+    }
+  }
+  return const SizedBox(width: 100, height: 120, child: Icon(Icons.image)); // Fallback with size
+}
+
+  Map<String, List<Map<String, dynamic>>> _zoskupitReceptyPodlaKategorie(
+    List<Map<String, dynamic>> recepty,
+  ) {
+    final kategorie = <String, List<Map<String, dynamic>>>{};
+
+    for (final recept in recepty) {
+      // Explicitly handle "Bez kategórie"
+      final kategoria = recept['kategoria']?.isEmpty ?? true
+          ? 'Bez kategórie'
+          : recept['kategoria'];
+      if (!kategorie.containsKey(kategoria)) {
+        kategorie[kategoria] = [];
+      }
+      kategorie[kategoria]!.add(recept);
+    }
+
+    return kategorie;
+  }
+
+  void _showCategoryFilterDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10), // Rounded corners
+          ),
+          contentPadding: const EdgeInsets.all(16),
+          content: Column(
+            mainAxisSize: MainAxisSize.min, // Fit the content
+            children: [
+              const Text(
+                'Vyberte kategóriu',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...receptProvider.kategorie.map((kategoria) {
+                return ListTile(
+                  title: Text(kategoria),
+                  onTap: () {
+                    setState(() {
+                      _selectedFilterKategoria = kategoria;
+                    });
+                    Navigator.pop(context); // Close the dialog
+                  },
+                );
+              }).toList(),
+              ListTile(
+                title: const Text('Všetky kategórie'),
+                onTap: () {
+                  setState(() {
+                    _selectedFilterKategoria = null; // Reset filter
+                  });
+                  Navigator.pop(context); // Close the dialog
+                },
+              ),
+              ListTile(
+                title: const Text('Bez kategórie'),
+                onTap: () {
+                  setState(() {
+                    _selectedFilterKategoria = 'Bez kategórie';
+                  });
+                  Navigator.pop(context); // Close the dialog
+                },
+              ),
+                // Add "Obľúbené" to the filter dialog
+              ListTile(
+                title: const Text('Obľúbené'),
+                onTap: () {
+                  setState(() {
+                    _selectedFilterKategoria =
+                        'Obľúbené'; // Special value for favorites
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

@@ -6,6 +6,7 @@ import '../database_helper.dart';
 import '../providers/functions_provider.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
+import '../providers/recept_provider.dart'; // Import ReceptProvider
 
 class UpravitRecept extends StatefulWidget {
   final Map<String, dynamic> recept;
@@ -112,7 +113,9 @@ class _UpravitReceptState extends State<UpravitRecept> {
       'obrazky': jsonEncode(_selectedImages.map((image) => image.path).toList()),
     };
 
-    await _dbHelper.updateRecept(updatedRecept);
+    // Použitie ReceptProvider na aktualizáciu receptu
+    final receptProvider = Provider.of<ReceptProvider>(context, listen: false);
+    await receptProvider.updateRecept(updatedRecept);
 
     if (!mounted) return;
 
@@ -120,7 +123,8 @@ class _UpravitReceptState extends State<UpravitRecept> {
       const SnackBar(content: Text('Recept bol aktualizovaný!')),
     );
 
-    Navigator.pop(context);
+    // Vrátiť aktualizovaný recept späť do DetailReceptu
+    Navigator.pop(context, updatedRecept);
   }
 
   void _removeStep(int index) {
@@ -277,6 +281,7 @@ class _UpravitReceptState extends State<UpravitRecept> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Color.fromARGB(255, 255, 255, 255),
       body: Stack(
         children: [
           Scaffold(
@@ -291,8 +296,7 @@ class _UpravitReceptState extends State<UpravitRecept> {
                       Navigator.pop(context);
                     },
                   ),
-                  backgroundColor: const Color.fromARGB(0, 255, 255, 255),
-                  elevation: 0,
+                  backgroundColor: Color.fromARGB(255, 255, 255, 255),
                   flexibleSpace: Stack(
                     children: [
                       Positioned.fill(

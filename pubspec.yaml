@@ -34,6 +34,7 @@ dependencies:
   path: ^1.8.3 # For handling file paths
   image_picker: ^0.8.7+4 # For picking images from the gallery
   carousel_slider: ^4.2.1 # For creating a carousel slider
+  intl: ^0.18.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

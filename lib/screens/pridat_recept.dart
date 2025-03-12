@@ -86,11 +86,13 @@ class _PridatReceptState extends State<PridatRecept>
   String _selectedUnit = '...'; // Default unit
   final List<String> _units = [
     '...', // Default unit
-    'čajová lyžička',
-    'polievková lyžica',
-    'šálka',
-    'gram',
-    'mililiter',
+    'čl',
+    'pl',
+    'pohár',
+    'g',
+    'ml',
+    'l',
+    'ks',
   ];
 
   List<String> _kategorie = [];
