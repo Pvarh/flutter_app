@@ -56,27 +56,27 @@ class ReceptProvider with ChangeNotifier {
 
   // Toggle favorite status of a recipe
   Future<void> toggleFavorite(int id) async {
-  // Find the recipe by ID
-  final recipeIndex = _recepty.indexWhere((recept) => recept['id'] == id);
-  if (recipeIndex != -1) {
-    // Create a new mutable copy of the recipe
-    final updatedRecept = Map<String, dynamic>.from(_recepty[recipeIndex]);
+    // Find the recipe by ID
+    final recipeIndex = _recepty.indexWhere((recept) => recept['id'] == id);
+    if (recipeIndex != -1) {
+      // Create a new mutable copy of the recipe
+      final updatedRecept = Map<String, dynamic>.from(_recepty[recipeIndex]);
 
-    // Toggle the isFavorite status
-    updatedRecept['isFavorite'] = updatedRecept['isFavorite'] == 1 ? 0 : 1;
+      // Toggle the isFavorite status
+      updatedRecept['isFavorite'] = updatedRecept['isFavorite'] == 1 ? 0 : 1;
 
-    // Update the database
-    await _dbHelper.updateRecept(updatedRecept);
+      // Update the database
+      await _dbHelper.updateRecept(updatedRecept);
 
-    // Create a new mutable list and update the recipe
-    final updatedRecepty = List<Map<String, dynamic>>.from(_recepty);
-    updatedRecepty[recipeIndex] = updatedRecept;
+      // Create a new mutable list and update the recipe
+      final updatedRecepty = List<Map<String, dynamic>>.from(_recepty);
+      updatedRecepty[recipeIndex] = updatedRecept;
 
-    // Update the local list of recipes
-    _recepty = updatedRecepty;
+      // Update the local list of recipes
+      _recepty = updatedRecepty;
 
-    // Notify listeners to refresh the UI
-    notifyListeners();
+      // Notify listeners to refresh the UI
+      notifyListeners();
+    }
   }
-}
 }

@@ -44,6 +44,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1 # For generating app icons
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -54,7 +55,9 @@ dev_dependencies:
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
-
+flutter_icons:
+  image_path: "lib/assets/images/logo.png"
+  android: true
 # The following section is specific to Flutter packages.
 flutter:
 
@@ -69,6 +72,7 @@ flutter:
     - lib/assets/images/22.jpg
     - lib/assets/images/33.jpg
     - lib/assets/images/44.jpg
+    - lib/assets/images/logo.png
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

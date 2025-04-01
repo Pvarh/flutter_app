@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/recept_provider.dart';
 import 'providers/functions_provider.dart';
-import 'screens/moje_recepty.dart'; // Import MojeRecepty directly
-
+import 'screens/moje_recepty.dart'; 
 
 void main() {
   
@@ -11,7 +10,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ReceptProvider()), // State management for recipes
-        ChangeNotifierProvider(create: (_) => FunctionsProvider()),
+        ChangeNotifierProvider(create: (_) => FunctionsProvider()), // State management for functions
       ],
       child: const MyApp(),
     ),
@@ -25,20 +24,20 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Receptár', // App title
-      debugShowCheckedModeBanner: false, // Remove debug banner in the top-right corner
+      debugShowCheckedModeBanner: false, 
       theme: ThemeData(
-        // Customize the theme
+        
         colorScheme: ThemeData().colorScheme.copyWith(
               primary: const Color.fromARGB(255, 88, 88, 88), // Primary color
               surface: const Color.fromARGB(210, 255, 255, 255), // Surface color
               onSurface: const Color.fromARGB(255, 43, 40, 40), // Text color on surface
             ),
-        // Add more theme customizations if needed
+       
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent, // Make AppBar background transparent
-          elevation: 0, // Remove shadow
+          backgroundColor: Colors.transparent, 
+          elevation: 0, 
           titleTextStyle: TextStyle(
-            color: Color.fromARGB(255, 100, 100, 100), // AppBar title text color
+            color: Color.fromARGB(255, 100, 100, 100), 
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),

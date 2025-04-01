@@ -126,7 +126,7 @@ class _PridatReceptState extends State<PridatRecept>
       });
 
       // Simulate a delay for the loading animation
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 1), () {
         // Reset the widgets or state after the delay
         setState(() {
           _scaffoldKey = UniqueKey(); // Reset the Scaffold key

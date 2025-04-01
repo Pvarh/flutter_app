@@ -2,6 +2,20 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 
+class Kategoria {
+  final int id;
+  final String nazov;
+
+  Kategoria({required this.id, required this.nazov});
+
+  factory Kategoria.fromMap(Map<String, dynamic> map) {
+    return Kategoria(
+      id: map['id'],
+      nazov: map['nazov'],
+    );
+  }
+}
+
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -122,4 +136,14 @@ class DatabaseHelper {
     final db = await database;
     return await db.query('recepty', where: 'kategoria = ?', whereArgs: [kategoria]);
   }
+
+
+  // Metóda na získanie všetkých kategórií
+  Future<List<Kategoria>> getAllKategorie() async {
+  final db = await database;
+  final List<Map<String, dynamic>> maps = await db.query('kategorie');
+  return List.generate(maps.length, (i) {
+    return Kategoria.fromMap(maps[i]);
+  });
+}
 }
