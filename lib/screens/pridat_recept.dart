@@ -252,6 +252,7 @@ class _PridatReceptState extends State<PridatRecept>
           content: SingleChildScrollView(
             child: TextFormField(
               controller: _stepController,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 labelText: '...',
                 labelStyle: TextStyle(
@@ -326,6 +327,7 @@ class _PridatReceptState extends State<PridatRecept>
           content: SingleChildScrollView(
             child: TextFormField(
               controller: _stepController,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 labelText: 'Text kroku',
                 labelStyle: TextStyle(
@@ -602,6 +604,7 @@ SizedBox(
                             const SizedBox(height: 10),
                             TextFormField(
                               controller: _nazovController,
+                              textCapitalization: TextCapitalization.sentences,
                               decoration: InputDecoration(
                                 hintText:
                                     _nazovController.text.isEmpty
@@ -942,6 +945,7 @@ SizedBox(
                             if (!_isStepMode)
                               TextFormField(
                                 controller: _postupController,
+                                textCapitalization: TextCapitalization.sentences,
                                 decoration: InputDecoration(
                                   hintText:
                                       _postupController.text.isEmpty
@@ -995,6 +999,7 @@ SizedBox(
                             const SizedBox(height: 10),
                             TextFormField(
                               controller: _poznamkyController,
+                              textCapitalization: TextCapitalization.sentences,
                               decoration: InputDecoration(
                                 hintText:
                                     _poznamkyController.text.isEmpty
@@ -1096,7 +1101,9 @@ SizedBox(
     _mnozstvo = null;
     _selectedUnit = '...'; // Default unit
 
+  
     showDialog(
+      
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
@@ -1122,6 +1129,7 @@ SizedBox(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextFormField(
+                    textCapitalization: TextCapitalization.sentences,
                     onChanged: (value) {
                       setStateDialog(() => _novaIngrediencia = value);
                     },
@@ -1307,6 +1315,7 @@ SizedBox(
                 children: [
                   TextFormField(
                     initialValue: nazov,
+                    textCapitalization: TextCapitalization.sentences,
                     onChanged: (value) {
                       setStateDialog(() => _novaIngrediencia = value);
                     },

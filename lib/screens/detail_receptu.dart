@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'dart:async'; // Import pre Future.delayed
-
+import 'full_screen_image_viewer.dart';
 import 'upravit_recept.dart';
 import '../providers/recept_provider.dart';
 
@@ -257,26 +257,42 @@ class _DetailReceptuState extends State<DetailReceptu>
                                   }
                                 },
                                 itemBuilder: (context, index) {
-                                  return ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Image.file(
-                                      File(imagePaths[index]),
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      // Pridanie errorBuilder pre prípad chyby načítania obrázka
-                                      errorBuilder: (
+                                  return GestureDetector(
+                                    // <-- Wrap with GestureDetector
+                                    onTap: () {
+                                      // Navigate to the full-screen viewer on tap
+                                      Navigator.push(
                                         context,
-                                        error,
-                                        stackTrace,
-                                      ) {
-                                        return const Center(
-                                          child: Icon(
-                                            Icons.broken_image,
-                                            color: Colors.grey,
-                                            size: 50,
-                                          ),
-                                        );
-                                      },
+                                        MaterialPageRoute(
+                                          builder:
+                                              (_) => FullScreenImageViewer(
+                                                imagePath: imagePaths[index],
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                    child: ClipRRect(
+                                      // <-- Your existing ClipRRect
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Image.file(
+                                        File(imagePaths[index]),
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        errorBuilder: (
+                                          context,
+                                          error,
+                                          stackTrace,
+                                        ) {
+                                          // ... existing error builder ...
+                                          return const Center(
+                                            child: Icon(
+                                              Icons.broken_image,
+                                              color: Colors.grey,
+                                              size: 50,
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     ),
                                   );
                                 },

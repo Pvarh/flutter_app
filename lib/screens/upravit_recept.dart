@@ -583,6 +583,7 @@ class _UpravitReceptState extends State<UpravitRecept>
                           title: 'Názov receptu',
                           child: TextFormField(
                             controller: formState.nazovController,
+                            textCapitalization: TextCapitalization.sentences,
                             decoration: const InputDecoration(
                               hintText: 'Zadajte názov...',
                               border: InputBorder.none,
@@ -807,6 +808,7 @@ class _UpravitReceptState extends State<UpravitRecept>
                           title: 'Poznámky',
                           child: TextFormField(
                             controller: formState.poznamkyController,
+                            textCapitalization: TextCapitalization.sentences,
                             decoration: const InputDecoration(
                               hintText: 'Pridajte poznámky...',
                               border: InputBorder.none,
@@ -955,6 +957,7 @@ class _UpravitReceptState extends State<UpravitRecept>
     // Prijíma notifier
     return TextFormField(
       controller: formState.postupController, // Používa controller z notifiera
+      textCapitalization: TextCapitalization.sentences,
       decoration: const InputDecoration(
         hintText: 'Napíšte postup prípravy...',
         border: InputBorder.none,
@@ -1047,6 +1050,7 @@ class _UpravitReceptState extends State<UpravitRecept>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextFormField(
+                    textCapitalization: TextCapitalization.sentences,
                     controller: nc,
                     onChanged: (v) {
                       tempIngredientName = v;
@@ -1067,6 +1071,7 @@ class _UpravitReceptState extends State<UpravitRecept>
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
+                    textCapitalization: TextCapitalization.sentences,
                     controller: qc,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
@@ -1215,6 +1220,7 @@ class _UpravitReceptState extends State<UpravitRecept>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextFormField(
+                    textCapitalization: TextCapitalization.sentences,
                     controller: nc,
                     onChanged: (v) {
                       tempIngredientName = v;
@@ -1346,6 +1352,7 @@ class _UpravitReceptState extends State<UpravitRecept>
           ),
           content: SingleChildScrollView(
             child: TextFormField(
+              textCapitalization: TextCapitalization.sentences,
               controller: stepController,
               decoration: InputDecoration(
                 labelText: 'Text kroku',
@@ -1423,6 +1430,7 @@ class _UpravitReceptState extends State<UpravitRecept>
           ),
           content: SingleChildScrollView(
             child: TextFormField(
+              textCapitalization: TextCapitalization.sentences,
               controller: stepController,
               decoration: InputDecoration(
                 labelText: 'Text kroku',
